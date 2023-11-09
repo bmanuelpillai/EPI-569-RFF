@@ -9,8 +9,8 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ```{r}
-case_list <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/REAL/Software Repository/EPI-569-RFF/rff_finalcases_clean_2023.rds")
+case_list <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rff_finalcases_clean_2023.rds")
 
-roster <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/REAL/Software Repository/EPI-569-RFF/rosters_569_517_clean_2023.rds")
+roster <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rosters_569_517_clean_2023.rds")
 ```
 
