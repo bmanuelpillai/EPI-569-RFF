@@ -1,0 +1,16 @@
+---
+title: "RFF First Check In"
+output: html_document
+date: "2023-11-09"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+case_list <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/REAL/Software Repository/EPI-569-RFF/rff_finalcases_clean_2023.rds")
+
+roster <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/REAL/Software Repository/EPI-569-RFF/rosters_569_517_clean_2023.rds")
+```
+
