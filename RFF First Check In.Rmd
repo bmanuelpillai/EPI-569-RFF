@@ -9,12 +9,60 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 Libraries
 ```{r}
-library(tidyverse)
+#install this package if you don't have it
+#install.packages("pacman")
+pacman::p_load(tidyverse,
+			 rio,
+			 janitor,
+			 here,
+			 skim)
 ```
 Load in Data
 ```{r}
-case_list <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rff_finalcases_clean_2023.rds")
-roster <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rosters_569_517_clean_2023.rds")
+#Made this more shareable. Set your working directory first.
+case_list <- import(here::here("rff_finalcases_clean_2023.rds"))
+roster <- import(here::here("rosters_569_517_clean_2023.rds")) %>% 
+	janitor::clean_names()
+case_list.cols <- c("report_datetime",
+                   "id",
+                   "infected_by",
+                   "gender",
+                   "course",
+                   "exposure_date",
+                   "exposure_time",
+                   "symptoms",
+                   "incubation_period",
+                   "infectious_period",
+                   "contacts",
+                   "sec_cases",
+                   "first_exposure_id",
+                   "first_exposure_date",
+                   "first_exposure_time",
+                   "second_exposure_id",
+                   "second_exposure_date",
+                   "second_exposure_time",
+                   "third_exposure_id",
+                   "third_exposure_date",
+                   "third_exposure_time",
+                   "fourth_exposure_id",
+                   "fourth_exposure_date",
+                   "fourth_exposure_time",
+                   "fifth_exposure_id",
+                   "fifth_exposure_date",
+                   "fifth_exposure_time",
+                   "exposure_datetime",
+                   "first_exposure_datetime",
+                   "second_exposure_datetime",
+                   "third_exposure_datetime",
+                   "fourth_exposure_datetime",
+                   "fifth_exposure_datetime")
+
+colnames(case_list) <- case_list.cols
+
+# Data cleaning
+case_list <- case_list %>% 
+  mutate(onset_datetime = exposure_datetime + incubation_period) %>% 
+  mutate(onset_date = date(onset_datetime))
 ```
 
 Epi Curve
@@ -24,6 +72,22 @@ ggplot(case_list, aes(x = `Date of Exposure`, y = ..count..)) +
   geom_line(stat = "count") +
   labs(x = "Date of Exposure", y = "Case Count") +
   ggtitle("Epi Curve")
+
+#Try this out
+epicurve <- as.data.frame(case_list %>% 
+                            group_by(onset_date) %>%
+                            summarize(incidence=n()))
+
+plot1 <- epicurve %>% 
+  ggplot(aes(x = onset_date, y = incidence, labs = FALSE)) + 
+  geom_bar(stat="identity", fill="gray45") +
+  scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
+  scale_y_continuous(breaks = seq(0, 15, by = 2)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Exposure Date",
+       y = "Number of Cases",
+       title = "Epi Curve for Rollins Fall Fever")
+plot1
 ```
 
 
