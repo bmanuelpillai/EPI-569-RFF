@@ -7,10 +7,24 @@ date: "2023-11-09"
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
+Libraries
+```{r}
+library(tidyverse)
+```
+Load in Data
 ```{r}
 case_list <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rff_finalcases_clean_2023.rds")
-
 roster <- readRDS(file = "/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rosters_569_517_clean_2023.rds")
 ```
+
+Epi Curve
+```{r}
+#Not sure how to get the y-axis to be cumlative case count. This look wonky.
+ggplot(case_list, aes(x = `Date of Exposure`, y = ..count..)) +
+  geom_line(stat = "count") +
+  labs(x = "Date of Exposure", y = "Case Count") +
+  ggtitle("Epi Curve")
+```
+
+
 
