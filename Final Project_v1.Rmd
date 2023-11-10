@@ -1,0 +1,68 @@
+---
+title: "EPI 569 Final Project"
+author: "Meghna Ray"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+### R setup 
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***Load packages***
+```{r}
+pacman::p_load(tidyverse, 
+               ggplot2,
+               janitor,
+               lubridate)
+```
+
+### Load data
+```{r}
+raw_data <- readRDS('rff_finalcases_clean_2023.rds') %>% clean_names()
+roster <- readRDS('rosters_569_517_clean_2023.rds') %>%  clean_names()
+```
+
+### Data Cleaning 
+```{r}
+linelist <- raw_data %>% 
+  #rename variables 
+  rename(c('report' = 'reporting_time',
+           'infector_id' = 'infectedby',
+           'exposure_date' = 'date_of_exposure',
+           'exposure_time' = 'time_of_exposure',
+           'symptomatic' = 'did_you_have_symptoms',
+           'incubation_hours' = 'how_many_hours_after_exposure_did_you_develop_symptoms',
+           'illness_duration' = 'how_many_hours_after_your_symptom_onset_did_you_feel_better',
+           'n_contacts' = 'how_many_people_did_you_expose',
+           'n_infect' = 'how_many_people_did_you_actually_infect',
+           'contact1_id' = 'case_id_first_exposure',
+           'contact1_date' = 'date_of_first_exposure',
+           'contact1_time' = 'time_of_first_exposure',
+           'contact2_id' = 'case_id_second_exposure',
+           'contact2_date' = 'date_of_second_exposure',
+           'contact2_time' = 'time_of_second_exposure',
+           'contact3_id' = 'case_id_third_exposure',
+           'contact3_date' = 'date_of_third_exposure',
+           'contact3_time' = 'time_of_third_exposure',
+           'contact4_id' = 'case_id_fourth_exposure',
+           'contact4_date' = 'date_of_fourth_exposure',
+           'contact4_time' = 'time_of_fourth_exposure',
+           'contact5_id' = 'case_id_fifth_exposure',
+           'contact5_date' = 'date_of_fifth_exposure',
+           'contact5_time' = 'time_of_fifth_exposure',
+           'exposure0' = 'date_time_exposure',
+           'exposure1' = 'date_time_first_exposure',
+           'exposure2' = 'date_time_second_exposure',
+           'exposure3' = 'date_time_third_exposure',
+           'exposure4' = 'date_time_fourth_exposure',
+           'exposure5' = 'date_time_fifth_exposure'))
+```
+
+### Plot epi curve 
+
+
+
+
