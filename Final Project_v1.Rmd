@@ -142,7 +142,7 @@ recovered <- linelist %>%
 ```{r}
 infected <- linelist %>% 
   group_by(onset) %>% 
-  summarize(n_infected = n()) %>% 
+  summarize(n_onset = n()) %>% 
   na.omit()
 
 #option 2
@@ -152,7 +152,8 @@ dateseq <- seq(from = as.Date(min(linelist$onset, na.rm = TRUE)),
 
 infectedseq <- map(dateseq, ~ sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
 
-infected2 <- as.data.frame(cbind(dateseq, infectedseq))
+infected2$date <- dateseq
+infected2$n_infected <- as.numeric(infectedseq)
 
 ```
 
@@ -160,28 +161,31 @@ infected2 <- as.data.frame(cbind(dateseq, infectedseq))
 ```{r}
 
 #Join infected and recovered datasets
-epicurve2 <- infected %>% 
-  full_join(recovered, by =c('onset' = 'recovered'))
+epicurve2 <- infected2 %>% 
+  full_join(recovered, by =c('date' = 'recovered')) %>% 
+	full_join(infected, by = c("date" = "onset"))
 
 #Set na values to zero 
 epicurve2 <- epicurve2 %>% 
   mutate(n_infected = ifelse(is.na(n_infected), 0, n_infected)) %>% 
-  mutate(n_recovered = ifelse(is.na(n_recovered), 0, n_recovered)) 
+  mutate(n_recovered = ifelse(is.na(n_recovered), 0, n_recovered)) %>% 
+	mutate(n_onset = ifelse(is.na(n_onset), 0, n_onset))
 
 #Create variable for cumulative recoveries and infected
 epicurve2 <- epicurve2 %>% 
   mutate(total_recovered = cumsum(n_recovered)) %>% 
-  mutate(total_infected = cumsum(n_infected))
+  mutate(total_infected = cumsum(n_onset))
 
 #Calculate number of people not susceptible and susceptible 
+total_pop <- nrow(roster)
 epicurve2 <- epicurve2 %>% 
-  mutate(susceptible = 154 - total_infected)
+  mutate(susceptible = total_pop - total_infected)
 ```
 
 ***Plot susceptible, infected, and recovered by day***
 ```{r}
 plot2 <- 
-  ggplot(epicurve2,aes(x=onset), labs = FALSE) +
+  ggplot(epicurve2,aes(x = date), labs = FALSE) +
            geom_line(aes(y = susceptible), color = "red") +
            geom_line(aes(y = n_infected), color = "blue") +
            geom_line(aes(y = total_recovered), color = "green") +
