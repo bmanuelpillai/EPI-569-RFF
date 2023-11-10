@@ -16,7 +16,8 @@ knitr::opts_chunk$set(echo = TRUE)
 pacman::p_load(tidyverse, 
                ggplot2,
                janitor,
-               lubridate)
+               lubridate,
+               dplyr)
 ```
 
 ### Load data
@@ -58,11 +59,19 @@ linelist <- raw_data %>%
            'exposure2' = 'date_time_second_exposure',
            'exposure3' = 'date_time_third_exposure',
            'exposure4' = 'date_time_fourth_exposure',
-           'exposure5' = 'date_time_fifth_exposure'))
+           'exposure5' = 'date_time_fifth_exposure')) %>% 
+  
+  #recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
+  mutate( gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
+  
+  #recode course variable as numeric (0 = EPI 569, 1 = EPI 517, 2 = both)
+  mutate(course = recode(course, "EPI 569 (Concepts and Methods in ID EPI)" = 0, 
+                         "EPI/GH 517 (Case Studies in ID)" = 1,
+                         "BOTH" = 2)) %>% 
+  
+  #recode symptomatic variable as numeric (0 = No, 1 = Yes)
+  mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1))
+  
 ```
-
-### Plot epi curve 
-
-
 
 
