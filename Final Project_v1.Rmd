@@ -22,8 +22,8 @@ pacman::p_load(tidyverse,
 
 ### Load data
 ```{r}
-raw_data <- readRDS('rff_finalcases_clean_2023.rds') %>% clean_names()
-roster <- readRDS('rosters_569_517_clean_2023.rds') %>%  clean_names()
+raw_data <- readRDS('rff_finalcases_clean_2023.rds') %>% janitor::clean_names()
+roster <- readRDS('rosters_569_517_clean_2023.rds') %>%  janitor::clean_names()
 ```
 
 ### Data Cleaning 
