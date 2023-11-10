@@ -77,12 +77,16 @@ linelist <- raw_data %>%
 
 ### Plot Epi Curve
 
+***Onset varialbe***
 ```{r}
 #Create new onset variable using date and time of exposure + incubation period 
 linelist <- linelist %>% 
   mutate(onset = exposure0 + incubation_period) %>% 
   mutate(onset = date(onset))
+```
 
+***Plot epi curve***
+```{r}
 #Create data frame for epi curve with onset and incidence
 epicurve <- as.data.frame(linelist %>% 
                             group_by(onset) %>%
@@ -100,3 +104,25 @@ plot1 <- epicurve %>%
        title = "Epi Curve for Rollins Fall Fever")
 plot1
 ```
+
+***Plot log cases***
+```{r, include = TRUE, echo = T}
+epicurve <- epicurve %>% 
+  mutate(log_cases = log(incidence))
+
+#Plot log cases
+plot2 <- epicurve %>% 
+  ggplot(aes(x = onset, y = log_cases, labs = FALSE)) + 
+  geom_bar(stat="identity", fill="gray45") +
+  scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
+  scale_y_continuous() +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Exposure Date",
+       y = "Log Cases",
+       title = "Epi Curve - Log Cases")
+plot2
+```
+
+
+
+
