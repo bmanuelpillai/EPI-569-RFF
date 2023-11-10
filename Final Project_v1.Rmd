@@ -144,6 +144,16 @@ infected <- linelist %>%
   group_by(onset) %>% 
   summarize(n_infected = n()) %>% 
   na.omit()
+
+#option 2
+dateseq <- seq(from = as.Date(min(linelist$onset, na.rm = TRUE)),
+								 to = as.Date(max(linelist$recovered, na.rm = TRUE)),
+								 by = "1 day")
+
+infectedseq <- map(dateseq, ~ sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
+
+infected2 <- as.data.frame(cbind(dateseq, infectedseq))
+
 ```
 
 ***Calculate number of susceptible by day***
@@ -173,7 +183,7 @@ epicurve2 <- epicurve2 %>%
 plot2 <- 
   ggplot(epicurve2,aes(x=onset), labs = FALSE) +
            geom_line(aes(y = susceptible), color = "red") +
-           geom_line(aes(y = total_infected), color = "blue") +
+           geom_line(aes(y = n_infected), color = "blue") +
            geom_line(aes(y = total_recovered), color = "green") +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Date",
