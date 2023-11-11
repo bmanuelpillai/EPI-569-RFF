@@ -155,6 +155,9 @@ infectedseq <- map(dateseq, ~ sum(.x >= linelist$onset & .x < linelist$recovered
 infected2$date <- dateseq
 infected2$n_infected <- as.numeric(infectedseq)
 
+#I tried this instead and got infected2 to work (Bevin)
+infectedseq <- map(dateseq, ~sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
+infected2 <- data.frame(date = dateseq, n_infected = as.numeric(infectedseq))
 ```
 
 ***Calculate number of susceptible by day***
@@ -184,15 +187,20 @@ epicurve2 <- epicurve2 %>%
 
 ***Plot susceptible, infected, and recovered by day***
 ```{r}
-plot2 <- 
-  ggplot(epicurve2,aes(x = date), labs = FALSE) +
-           geom_line(aes(y = susceptible), color = "red") +
-           geom_line(aes(y = n_infected), color = "blue") +
-           geom_line(aes(y = total_recovered), color = "green") +
+plot2 <- ggplot(epicurve2, aes(x = date)) +
+  geom_line(aes(y = susceptible, color = "Susceptible")) +
+  geom_line(aes(y = n_infected, color = "Infected")) +
+  geom_line(aes(y = total_recovered, color = "Recovered")) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Date",
        y = "Number of Cases",
-       title = "Epi Curve for Rollins Fall Fever")
+       title = "Epi Curve for Rollins Fall Fever") +
+  scale_color_manual(name='Class',
+                     breaks=c('Susceptible', 'Infected', 'Recovered'),
+                     values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
+  theme(legend.title = element_text(size = 20),
+        legend.text = element_text(size = 14))
+
 plot2
 ```
 
