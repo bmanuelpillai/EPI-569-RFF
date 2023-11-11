@@ -199,7 +199,7 @@ plot2 <- ggplot(epicurve2, aes(x = date)) +
                      breaks=c('Susceptible', 'Infected', 'Recovered'),
                      values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
   theme(legend.title = element_text(size = 15),
-        legend.text = element_text(size = 10))
+        legend.text = element_text(size = 8))
 
 plot2
 ```
