@@ -198,8 +198,8 @@ plot2 <- ggplot(epicurve2, aes(x = date)) +
   scale_color_manual(name='Class',
                      breaks=c('Susceptible', 'Infected', 'Recovered'),
                      values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
-  theme(legend.title = element_text(size = 20),
-        legend.text = element_text(size = 14))
+  theme(legend.title = element_text(size = 15),
+        legend.text = element_text(size = 10))
 
 plot2
 ```
