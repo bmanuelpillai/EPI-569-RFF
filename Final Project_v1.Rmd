@@ -204,3 +204,27 @@ plot2 <- ggplot(epicurve2, aes(x = date)) +
 plot2
 ```
 
+***Wanted to see how a percent Epi Curve would look. I havent seen the data presented this way in class though***
+```{r}
+epicurve3 <- epicurve2 %>% 
+	mutate(susceptible2 = susceptible/153) %>% 
+	mutate(n_infected2 = n_infected/153) %>% 
+	mutate(total_recovered2 = total_recovered/153)
+
+plot3 <- ggplot(epicurve3, aes(x = date)) +
+  geom_line(aes(y = susceptible2, color = "Susceptible")) +
+  geom_line(aes(y = n_infected2, color = "Infected")) +
+  geom_line(aes(y = total_recovered2, color = "Recovered")) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Date",
+       y = "Proportion of Total Population",
+       title = "Epi Curve for Rollins Fall Fever") +
+  scale_color_manual(name='Class',
+                     breaks=c('Susceptible', 'Infected', 'Recovered'),
+                     values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
+  theme(legend.title = element_text(size = 15),
+        legend.text = element_text(size = 8))
+
+plot3
+```
+
