@@ -128,6 +128,7 @@ plot2
 #Create new onset variable using date and time of exposure + incubation period 
 linelist <- linelist %>% 
   mutate(recovered = onset + illness_duration)
+#[CD] Because we have a lot of missing illness_duration, I propose that we impute this variable as the median illness duration (26 hours)
 ```
 
 ***Calculate number of recovered by day***
@@ -150,10 +151,10 @@ dateseq <- seq(from = as.Date(min(linelist$onset, na.rm = TRUE)),
 								 to = as.Date(max(linelist$recovered, na.rm = TRUE)),
 								 by = "1 day")
 
-infectedseq <- map(dateseq, ~ sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
+#infectedseq <- map(dateseq, ~ sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
 
-infected2$date <- dateseq
-infected2$n_infected <- as.numeric(infectedseq)
+#infected2$date <- dateseq
+#infected2$n_infected <- as.numeric(infectedseq)
 
 #I tried this instead and got infected2 to work (Bevin)
 infectedseq <- map(dateseq, ~sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
@@ -226,5 +227,24 @@ plot3 <- ggplot(epicurve3, aes(x = date)) +
         legend.text = element_text(size = 8))
 
 plot3
+```
+
+**Plot epi curve using exposure date rather than onset date**
+```{r}
+epicurve4 <- as.data.frame(linelist %>% 
+                            group_by(exposure_date) %>%
+                            summarize(incidence=n()))
+
+#Plot epi curve 
+plot4 <- epicurve4 %>% 
+  ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
+  geom_bar(stat="identity", fill="gray45") +
+  scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
+  scale_y_continuous(breaks = seq(0, 15, by = 2)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Exposure Date",
+       y = "Number of Cases",
+       title = "Epi Curve for Rollins Fall Fever")
+plot4
 ```
 
