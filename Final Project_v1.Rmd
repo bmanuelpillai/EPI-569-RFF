@@ -3,15 +3,18 @@ title: "EPI 569 Final Project"
 author: "Meghna Ray, Charlotte Doran, and Bevin Manuelpillai"
 date: "`r Sys.Date()`"
 output: html_document
+execute:
+	cache: true
 ---
 
-### R setup 
+### R setup
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
 ***Load packages***
+
 ```{r}
 pacman::p_load(tidyverse, 
                ggplot2,
@@ -21,12 +24,14 @@ pacman::p_load(tidyverse,
 ```
 
 ### Load data
+
 ```{r}
-raw_data <- readRDS('rff_finalcases_clean_2023.rds') %>% janitor::clean_names()
-roster <- readRDS('rosters_569_517_clean_2023.rds') %>%  janitor::clean_names()
+raw_data <- readRDS('rff_finalcases_clean_2023_2.rds') %>% janitor::clean_names()
+roster <- readRDS('rosters_569_517_clean_2023_2.rds') %>%  janitor::clean_names()
 ```
 
-### Data Cleaning 
+### Data Cleaning
+
 ```{r}
 linelist <- raw_data %>% 
   #rename variables 
@@ -59,7 +64,8 @@ linelist <- raw_data %>%
            'exposure2' = 'date_time_second_exposure',
            'exposure3' = 'date_time_third_exposure',
            'exposure4' = 'date_time_fourth_exposure',
-           'exposure5' = 'date_time_fifth_exposure')) %>% 
+           'exposure5' = 'date_time_fifth_exposure',
+  				 'severe_date' = 'date_you_became_severe')) %>% 
   
   #recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
   mutate(gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
@@ -70,14 +76,17 @@ linelist <- raw_data %>%
                          "BOTH" = 2)) %>% 
   
   #recode symptomatic variable as numeric (0 = No, 1 = Yes)
-  mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1))
+  mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1)) %>% 
+	
+	#recode severe variable as numeric (0 = No, 1 = Yes)
+	mutate(severe = recode(severe, "No" = 0, "Yes" = 1))
   
 ```
-
 
 ### Plot Epi Curve
 
 ***Onset variable***
+
 ```{r}
 #Create new onset variable using date and time of exposure + incubation period 
 med_incubation <- median(linelist$incubation_period, na.rm = TRUE)
@@ -90,6 +99,7 @@ linelist <- linelist %>%
 ```
 
 ***Plot epi curve***
+
 ```{r}
 #Create data frame for epi curve with onset and incidence
 epicurve <- as.data.frame(linelist %>% 
@@ -110,6 +120,7 @@ plot1
 ```
 
 ***Plot log cases***
+
 ```{r, include = TRUE, echo = T}
 epicurve <- epicurve %>% 
   mutate(log_cases = log(incidence))
@@ -128,8 +139,9 @@ plot2
 ```
 
 ***Recovered variable***
+
 ```{r}
-#Create new onset variable using date and time of exposure + incubation period 
+#Create new recovered variable using date and time of exposure + incubation period + illness duration 
 med_duration <- median(linelist$illness_duration, na.rm = TRUE)
 
 linelist <- linelist %>% 
@@ -140,6 +152,7 @@ linelist <- linelist %>%
 ```
 
 ***Calculate number of recovered by day***
+
 ```{r}
 recovered <- linelist %>% 
   group_by(recovered) %>% 
@@ -148,6 +161,7 @@ recovered <- linelist %>%
 ```
 
 ***Calculate number of infected by day***
+
 ```{r}
 infected <- linelist %>%
   group_by(onset) %>%
@@ -165,6 +179,7 @@ infected2 <- data.frame(date = dateseq, n_infected = as.numeric(infectedseq))
 ```
 
 ***Calculate number of susceptible by day***
+
 ```{r}
 
 #Join infected and recovered datasets
@@ -190,6 +205,7 @@ epicurve2 <- epicurve2 %>%
 ```
 
 ***Plot susceptible, infected, and recovered by day***
+
 ```{r}
 plot2 <- ggplot(epicurve2, aes(x = date)) +
   geom_line(aes(y = susceptible, color = "Susceptible")) +
@@ -209,6 +225,7 @@ plot2
 ```
 
 ***Wanted to see how a percent Epi Curve would look. I havent seen the data presented this way in class though***
+
 ```{r}
 epicurve3 <- epicurve2 %>% 
 	mutate(susceptible2 = susceptible/153) %>% 
@@ -233,6 +250,7 @@ plot3
 ```
 
 **Plot epi curve using exposure date rather than onset date**
+
 ```{r}
 epicurve4 <- as.data.frame(linelist %>% 
                             group_by(exposure_date) %>%
@@ -251,3 +269,22 @@ plot4 <- epicurve4 %>%
 plot4
 ```
 
+## Modeling
+
+RFF confers complete immunity among those who recovered. Additionally, no new students entered the population during the outbreak, and no deaths occurred among susceptible individuals or asymptomatic individuals. The dynamics of this RFF outbreak can be described with the following set of equations.
+
+$\frac{dS}{dt} = -\lambda_t S$
+
+$\frac{dI_s}{dt} = \lambda_t S - \sigma_s I_s - \mu_s I_s$
+
+$\frac{dI_a}{dt} = \lambda_t S - \sigma_a I_a$ (*not sure if lambda term should be the same or different)
+
+$\frac{dR}{dt} = \sigma_s I_s + \sigma_a I_a$
+
+Where $\lambda_t$ is the force of infection, $\sigma$ is the recovery rate among infected individuals, and $\mu$ is the "death" rate among infected individuals (i.e. the rate at which cases became severe).
+
+Questions:
+
+-   Is the recovery rate the same among symptomatic vs. asymptomatic cases?
+
+-   Do all the deaths occur among infected individuals? Several severe dates occur after the calculated recovery date based on the illness duration reported.
