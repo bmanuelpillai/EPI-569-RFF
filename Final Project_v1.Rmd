@@ -162,8 +162,9 @@ recovered <- linelist %>%
 
 ```{r}
 infected <- linelist %>%
-  group_by(onset) %>%
-  summarize(n_onset = n()) %>%
+	filter(symptomatic == 1) %>% #not sure if we need to rethink this curve only among symptomatic people?
+  group_by(exposure0) %>%
+  summarize(n_infect = n()) %>%
   na.omit()
 
 #Create a sequence of dates from the onset to the end of the outbreak
