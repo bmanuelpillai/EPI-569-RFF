@@ -88,22 +88,23 @@ linelist <- raw_data %>%
 ***Onset and recovered variable***
 
 ```{r}
-#Create new onset variable using date and time of exposure + incubation period among symptomatic individuals
+med_incubation <- median(linelist$incubation_period, na.rm = TRUE)
+med_duration <- median(linelist$illness_duration, na.rm = TRUE)
+asymp_duration <- med_incubation + med_duration
 
+#Create onset variable
 linelist <- linelist %>% 
-	mutate(onset = case_when(symptomatic == 0 ~ NA,
-													 symptomatic == 1 ~ exposure0 + hours(incubation_period),
-													 is.na(symptomatic) ~ NA,
+	mutate(onset = case_when(symptomatic == 0 ~ NA, #no symptom onset for asymptomatic cases
+													 symptomatic == 1 ~ exposure0 + hours(incubation_period), #symptoms start after incubation period
+													 is.na(symptomatic) ~ NA, #keep missing and NA's NA
 													 TRUE ~ NA)) %>% 
   mutate(onset = date(onset))
 
-#Create new recovered variable using date and time of exposure + incubation period + illness duration for symptomatic individuals, or the severity date, if after that time
-
+#Create recovered variable
 linelist <- linelist %>% 
-	mutate(recovered = case_when(symptomatic == 0 ~ NA,
-															 (symptomatic == 1 & severe == 1) ~ pmax(onset + hours(illness_duration), severe_date),
+	mutate(recovered = case_when((symptomatic == 0 | is.na(symptomatic)) ~ exposure0 + hours(asymp_duration), #imputed infectious periods for asymptomatic or missing
+															 (symptomatic == 1 & severe == 1) ~ pmax(onset + hours(illness_duration), severe_date), #for severe cases, recovery is the later of illness duration end or severe date
 															 (symptomatic == 1 & severe == 0) ~ onset + hours(illness_duration),
-															 is.na(symptomatic) ~ NA,
 															 TRUE ~ NA)) %>% 
 	mutate(recovered = date(recovered))
 
@@ -112,7 +113,7 @@ linelist <- linelist %>%
 ***Plot epi curve***
 
 ```{r}
-#Create data frame for epi curve with onset and incidence
+#Create data frame for epi curve with exposure date and incidence
 epicurve <- as.data.frame(linelist %>% 
                             group_by(exposure_date) %>%
                             summarize(incidence=n()))
@@ -162,18 +163,17 @@ recovered <- linelist %>%
 
 ```{r}
 infected <- linelist %>%
-	filter(symptomatic == 1) %>% #not sure if we need to rethink this curve only among symptomatic people?
-  group_by(exposure0) %>%
-  summarize(n_infect = n()) %>%
+  group_by(exposure_date) %>%
+  summarize(n_exposed = n()) %>%
   na.omit()
 
 #Create a sequence of dates from the onset to the end of the outbreak
-dateseq <- seq(from = as.Date(min(linelist$onset, na.rm = TRUE)),
+dateseq <- seq(from = as.Date(min(linelist$exposure_date, na.rm = TRUE)),
 								 to = as.Date(max(linelist$recovered, na.rm = TRUE)),
 								 by = "1 day")
 
 #For each date, calculate the number of infected people by determining if that date is between their onset date and their recovery date
-infectedseq <- map(dateseq, ~sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
+infectedseq <- map(dateseq, ~sum(.x >= linelist$exposure_date & .x < linelist$recovered, na.rm = TRUE))
 infected2 <- data.frame(date = dateseq, n_infected = as.numeric(infectedseq))
 ```
 
@@ -183,33 +183,29 @@ infected2 <- data.frame(date = dateseq, n_infected = as.numeric(infectedseq))
 
 #Join infected and recovered datasets
 epicurve2 <- infected2 %>% 
-  full_join(recovered, by =c('date' = 'recovered')) %>%
-	full_join(infected, by = c("date" = "onset"))
-
-#Set na values to zero 
-epicurve2 <- epicurve2 %>% 
+  full_join(recovered, by = c("date" = "recovered")) %>% 
+	full_join(infected, by = c("date" = "exposure_date")) %>% 
+	#Set na values to zero 
   mutate(n_infected = ifelse(is.na(n_infected), 0, n_infected)) %>% 
   mutate(n_recovered = ifelse(is.na(n_recovered), 0, n_recovered)) %>% 
-	mutate(n_onset = ifelse(is.na(n_onset), 0, n_onset))
-
-#Create variable for cumulative recoveries and infected
-epicurve2 <- epicurve2 %>% 
+	mutate(n_exposed = ifelse(is.na(n_exposed), 0, n_exposed)) %>% 
+	#Create variable for cumulative recoveries and infected
   mutate(total_recovered = cumsum(n_recovered)) %>% 
-  mutate(total_infected = cumsum(n_onset))
+  mutate(total_infected = cumsum(n_exposed))
 
-#Calculate number of people not susceptible and susceptible 
+#Calculate number of people susceptible 
 total_pop <- nrow(roster)
 epicurve2 <- epicurve2 %>% 
-  mutate(susceptible = total_pop - total_infected)
+  mutate(n_susceptible = total_pop - total_infected)
 ```
 
 ***Plot susceptible, infected, and recovered by day***
 
 ```{r}
-plot2 <- ggplot(epicurve2, aes(x = date)) +
-  geom_line(aes(y = susceptible, color = "Susceptible")) +
-  geom_line(aes(y = n_infected, color = "Infected")) +
-  geom_line(aes(y = total_recovered, color = "Recovered")) +
+plot3 <- ggplot(epicurve2, aes(x = date)) +
+  geom_line(aes(y = n_susceptible, color = "Susceptible"), linewidth = 1) +
+  geom_line(aes(y = n_infected, color = "Infected"), linewidth = 1) +
+  geom_line(aes(y = total_recovered, color = "Recovered"), linewidth = 1) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Date",
        y = "Number of Cases",
@@ -217,10 +213,13 @@ plot2 <- ggplot(epicurve2, aes(x = date)) +
   scale_color_manual(name='Class',
                      breaks=c('Susceptible', 'Infected', 'Recovered'),
                      values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
+	scale_x_date(breaks = "2 days",
+							 date_labels = "%b %d") +
   theme(legend.title = element_text(size = 15),
-        legend.text = element_text(size = 8))
+        legend.text = element_text(size = 8),
+  			panel.grid.minor = element_blank())
 
-plot2
+plot3
 ```
 
 ***Wanted to see how a percent Epi Curve would look. I havent seen the data presented this way in class though***
