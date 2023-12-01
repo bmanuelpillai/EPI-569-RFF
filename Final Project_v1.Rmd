@@ -85,17 +85,28 @@ linelist <- raw_data %>%
 
 ### Plot Epi Curve
 
-***Onset variable***
+***Onset and recovered variable***
 
 ```{r}
-#Create new onset variable using date and time of exposure + incubation period 
-med_incubation <- median(linelist$incubation_period, na.rm = TRUE)
+#Create new onset variable using date and time of exposure + incubation period among symptomatic individuals
 
 linelist <- linelist %>% 
-  mutate(onset = ifelse(!is.na(incubation_period),
-  											exposure0 + hours(incubation_period),
-  											exposure0 + hours(med_incubation))) %>% 
+	mutate(onset = case_when(symptomatic == 0 ~ NA,
+													 symptomatic == 1 ~ exposure0 + hours(incubation_period),
+													 is.na(symptomatic) ~ NA,
+													 TRUE ~ NA)) %>% 
   mutate(onset = date(onset))
+
+#Create new recovered variable using date and time of exposure + incubation period + illness duration for symptomatic individuals, or the severity date, if after that time
+
+linelist <- linelist %>% 
+	mutate(recovered = case_when(symptomatic == 0 ~ NA,
+															 (symptomatic == 1 & severe == 1) ~ pmax(onset + hours(illness_duration), severe_date),
+															 (symptomatic == 1 & severe == 0) ~ onset + hours(illness_duration),
+															 is.na(symptomatic) ~ NA,
+															 TRUE ~ NA)) %>% 
+	mutate(recovered = date(recovered))
+
 ```
 
 ***Plot epi curve***
@@ -103,17 +114,17 @@ linelist <- linelist %>%
 ```{r}
 #Create data frame for epi curve with onset and incidence
 epicurve <- as.data.frame(linelist %>% 
-                            group_by(onset) %>%
+                            group_by(exposure_date) %>%
                             summarize(incidence=n()))
 
 #Plot epi curve 
 plot1 <- epicurve %>% 
-  ggplot(aes(x = onset, y = incidence, labs = FALSE)) + 
+  ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
   geom_bar(stat="identity", fill="gray45") +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Onset Date",
+  labs(x = "Exposure Date",
        y = "Number of Cases",
        title = "Epi Curve for Rollins Fall Fever")
 plot1
@@ -127,7 +138,7 @@ epicurve <- epicurve %>%
 
 #Plot log cases
 plot2 <- epicurve %>% 
-  ggplot(aes(x = onset, y = log_cases, labs = FALSE)) + 
+  ggplot(aes(x = exposure_date, y = log_cases, labs = FALSE)) + 
   geom_bar(stat="identity", fill="gray45") +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous() +
@@ -136,19 +147,6 @@ plot2 <- epicurve %>%
        y = "Log Cases",
        title = "Epi Curve - Log Cases")
 plot2
-```
-
-***Recovered variable***
-
-```{r}
-#Create new recovered variable using date and time of exposure + incubation period + illness duration 
-med_duration <- median(linelist$illness_duration, na.rm = TRUE)
-
-linelist <- linelist %>% 
-  mutate(recovered = ifelse(!is.na(illness_duration),
-  													onset + hours(illness_duration),
-  													onset + hours(med_duration))) %>% 
-	mutate(recovered = date(recovered))
 ```
 
 ***Calculate number of recovered by day***
