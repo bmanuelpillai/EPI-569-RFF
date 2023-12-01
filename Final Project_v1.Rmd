@@ -20,7 +20,10 @@ pacman::p_load(tidyverse,
                ggplot2,
                janitor,
                lubridate,
-               dplyr)
+               dplyr,
+							 splitstackshape,
+							 earlyR,
+							 incidence)
 ```
 
 ### Load data
@@ -196,7 +199,9 @@ epicurve2 <- infected2 %>%
 #Calculate number of people susceptible 
 total_pop <- nrow(roster)
 epicurve2 <- epicurve2 %>% 
-  mutate(n_susceptible = total_pop - total_infected)
+  mutate(n_susceptible = total_pop - total_infected) %>% 
+	#Check that the total population size is stable
+	mutate(total = n_infected + total_recovered + n_susceptible)
 ```
 
 ***Plot susceptible, infected, and recovered by day***
@@ -230,7 +235,7 @@ epicurve3 <- epicurve2 %>%
 	mutate(n_infected2 = n_infected/153) %>% 
 	mutate(total_recovered2 = total_recovered/153)
 
-plot3 <- ggplot(epicurve3, aes(x = date)) +
+plot4 <- ggplot(epicurve3, aes(x = date)) +
   geom_line(aes(y = susceptible2, color = "Susceptible")) +
   geom_line(aes(y = n_infected2, color = "Infected")) +
   geom_line(aes(y = total_recovered2, color = "Recovered")) +
@@ -244,28 +249,67 @@ plot3 <- ggplot(epicurve3, aes(x = date)) +
   theme(legend.title = element_text(size = 15),
         legend.text = element_text(size = 8))
 
-plot3
+plot4
 ```
 
-**Plot epi curve using exposure date rather than onset date**
+**Plot epi curve using only symptom onset dates for observed (symptomatic) cases**
 
 ```{r}
 epicurve4 <- as.data.frame(linelist %>% 
-                            group_by(exposure_date) %>%
+													 	filter(symptomatic == 1) %>% 
+                            group_by(onset) %>%
                             summarize(incidence=n()))
 
 #Plot epi curve 
-plot4 <- epicurve4 %>% 
-  ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
+plot5 <- epicurve4 %>% 
+  ggplot(aes(x = onset, y = incidence, labs = FALSE)) + 
   geom_bar(stat="identity", fill="gray45") +
-  scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
+  scale_x_date(date_breaks = "2 days", date_labels = "%b %d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Exposure Date",
+  labs(x = "Symptom Onset Date",
        y = "Number of Cases",
        title = "Epi Curve for Rollins Fall Fever")
-plot4
+plot5
 ```
+
+## Reproduction Numbers
+```{r}
+start_day <- date("2023-10-11")
+end_day <- date("2023-10-20")
+```
+
+We used the initial growth rate method to calculate $R_0$ from the plot of the log cases based on exposure date. The first case on RFF was observed on `r start_day`. Using the plot of log cases, the log-linear growth period ends on `r end_day`.
+
+$I(t) \approx I(0) e^{rt}$
+
+```{r}
+linear_growth <- epicurve %>% 
+	filter(exposure_date %in% c(start_day, end_day))
+
+plot2 +
+	geom_line(data = linear_growth,
+						mapping = aes(x = exposure_date, y = log_cases),
+						color = "darkred",
+						linewidth = 1.5)
+```
+```{r}
+r0_df <- epicurve %>%
+	filter(exposure_date >= start_day, exposure_date <= end_day) %>% 
+	splitstackshape::expandRows("incidence", drop = FALSE) %>% 
+	select(exposure_date) %>% 
+	pull(exposure_date)
+
+i <- incidence(r0_df)
+mu <- (med_incubation + (0.5*med_duration))/24 #replace with mean generation time
+sigma <- (med_incubation + (0.5*med_duration))/24 #replace with standard deviation of generation time
+
+res <- get_R(i, si_mean = mu, si_sd = sigma)
+R_val <- sample_R(res, 1000)
+r0 <- mean(R_val)
+```
+
+Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, is `r round(r0, 1)`.
 
 ## Modeling
 
