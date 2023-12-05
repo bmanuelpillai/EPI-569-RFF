@@ -251,6 +251,78 @@ plot3 <- ggplot(epicurve4, aes(x = date)) +
   			panel.grid.minor = element_blank())
 plot3
 ```
+# Natural History Parameters
+
+## Incubation period
+```{r}
+mean_incubation <- linelist %>%
+	summarise(mean(incubation_period, na.rm = T))
+#23.36
+
+sd_incubation <- linelist %>% 
+	summarise(sd(incubation_period, na.rm = T))
+#7.38
+```
+
+## Illness duration
+```{r}
+mean_duration <- linelist %>%
+	summarise(mean(illness_duration, na.rm = T))
+#25.02
+
+ds_duration <- linelist %>%
+	summarise(sd(illness_duration, na.rm = T))
+#9.09
+```
+
+## Serial interval
+
+```{r}
+#Select only the columns of interest
+serial <- raw_data[, c("case_id", "infectedby", "date_of_exposure", "time_of_exposure", "how_many_hours_after_exposure_did_you_develop_symptoms")]
+
+#Covert to Exposure to Date_Time format
+serial$date_time_exposure <- as.POSIXct(paste(serial$date_of_exposure, serial$time_of_exposure), format="%Y-%m-%d %H:%M:%S")
+serial <- serial[, !(names(serial) %in% c("date_of_exposure", "time_of_exposure"))]
+
+#Covert Symptom Onset to Date_Time Format
+serial$date_time_symptom_onset <- serial$date_time_exposure + 
+  as.difftime(serial$how_many_hours_after_exposure_did_you_develop_symptoms, units = "hours")
+
+#Remove incubation period column
+serial <- serial[, !(names(serial) %in% c("how_many_hours_after_exposure_did_you_develop_symptoms"))]
+
+#Get infector and infected columns
+merged_data <- merge(serial, serial, by.x = "infectedby", by.y = "case_id", suffixes = c("_infected", "_infector"))
+
+#Calculate serial interval in days
+merged_data$serial_interval_in_days <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "days"))
+
+#Calculate serial interval in hours
+merged_data$serial_interval_in_hours <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "hours"))
+
+#Calculate serial interval in minutes
+merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
+
+serial_interval_in_days_average<- mean(merged_data$serial_interval_in_days, na.rm = T)
+
+serial_interval_in_days_sd<- sd(merged_data$serial_interval_in_days, na.rm = T)
+
+serial_interval_in_hours_average<- mean(merged_data$serial_interval_in_hours, na.rm = T)
+
+serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T)
+```
+
+	# Latent Period
+```{r}
+serial$latent <- serial$date_time_symptom_onset - serial$date_time_exposure
+mean_latent <- mean(serial$latent, na.rm = TRUE)
+#23.36
+ds_latent <- sd(serial$latent, na.rm = TRUE)
+#7.38
+```
+
+
 # Reproduction Numbers
 ```{r}
 start_day <- date("2023-10-11")
@@ -274,12 +346,12 @@ plot2 +
 r0_df <- epicurve3 %>%
 	filter(exposure_date >= start_day, exposure_date <= end_day) %>% 
 	splitstackshape::expandRows("incidence", drop = FALSE) %>% 
-	select(exposure_date) %>% 
+	dplyr::select(exposure_date) %>% 
 	pull(exposure_date)
 
 i <- incidence(r0_df)
-mu <- 1.81 #replace with mean generation time
-sigma <- 2.18 #replace with standard deviation of generation time
+mu <- serial_interval_in_days_average #replace with mean generation time
+sigma <- serial_interval_in_days_sd #replace with standard deviation of generation time
 res <- get_R(i, si_mean = mu, si_sd = sigma)
 R_val <- sample_R(res, 1000)
 r0 <- mean(R_val)
