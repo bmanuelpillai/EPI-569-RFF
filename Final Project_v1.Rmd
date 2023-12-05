@@ -273,6 +273,10 @@ plot5 <- epicurve4 %>%
 plot5
 ```
 
+## Natural History
+
+
+
 ## Reproduction Numbers
 ```{r}
 start_day <- date("2023-10-11")
@@ -301,8 +305,8 @@ r0_df <- epicurve %>%
 	pull(exposure_date)
 
 i <- incidence(r0_df)
-mu <- (med_incubation + (0.5*med_duration))/24 #replace with mean generation time
-sigma <- (med_incubation + (0.5*med_duration))/24 #replace with standard deviation of generation time
+mu <- 1.81 #replace with mean generation time
+sigma <- 2.18 #replace with standard deviation of generation time
 
 res <- get_R(i, si_mean = mu, si_sd = sigma)
 R_val <- sample_R(res, 1000)
@@ -310,6 +314,13 @@ r0 <- mean(R_val)
 ```
 
 Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, is `r round(r0, 1)`.
+
+We can compare this value to the $R_0$ calculated based purely on the number of people that each individual exposed.
+
+```{r}
+r0_2 <- mean(linelist$n_contacts)
+```
+
 
 ## Modeling
 
