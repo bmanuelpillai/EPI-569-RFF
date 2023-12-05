@@ -116,9 +116,6 @@ table(roster$program)
 
 table(roster$level)
 #full standing = 4, Graduate Year 1 = 63, Graduate Year 2 = 83, Non-Degree Graduate = 3, Senior = 1
-
-
-
 ```
 Case Distribution
 ```{r}
@@ -134,13 +131,14 @@ table(Severe$gender)
 Illness Duration in severe cases
 ```{r}
 mean(Severe$illness_duration)
-median(Severe$illness_duration)
+sd(Severe$illness_duration)
+
 ```
 
 Illness Duration in non_severe cases
 ```{r}
 mean(Non_Severe$illness_duration)
-median(Non_Severe$illness_duration)
+sd(Non_Severe$illness_duration)
 ```
 Compare infectiousness of symptomatic vs asymptomatic cases
 ```{r}
@@ -171,7 +169,7 @@ asymptomatic %>%
   mutate(infectiousness = n_infect/n_contacts) %>%
   summarize(mean(infectiousness, na.rm = TRUE))
 ```
-Compare Incidence of Undergraduates and Graduate Year 1 vs those that are Graduate Year 2 and doctorate students
+Compare Period Prevalence of Undergraduates and Graduate Year 1 vs those that are Graduate Year 2 and doctorate students
 ```{r}
 #Create new variable to dicotomize level variable
 #Get numerator
@@ -188,11 +186,11 @@ roster <- roster %>%
 table(roster$education)
 # 64 = 0 and 90 = 1
 
-incidence_G1S = 44/64
-incidence_G2D = 37/90
+period_prevalance_G1S = 44/64
+period_prevalance_G2D = 37/90
 ```
 
-Compare Incidence of RFF for different PH programs
+Compare Period Prevalence of RFF for different PH programs
 ```{r}
 table(roster$program)
 
@@ -209,10 +207,10 @@ full_data <- full_data %>%
                                      ifelse(program == "Global Health", 2, 3))))
 table(full_data$program_num)
 
-incidence_epi = 38/75
-incidnece_glepi = 18/29
-incidence_gh = 12/29
-incidence_otherprs = 13/21
+period_prevalance_epi = 38/75
+period_prevalance_glepi = 18/29
+period_prevalance_gh = 12/29
+period_prevalance_otherprs = 13/21
 ```
 
 

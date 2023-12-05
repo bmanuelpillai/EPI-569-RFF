@@ -77,34 +77,29 @@ linelist <- linelist %>%
 	mutate(onset = date(onset))
 ```
 
-### Calculating mean incubation period
+### Calculating Mean and SD Incubation Period
 ```{r}
 linelist %>%
 	summarise(mean(incubation_period, na.rm = T))
 #23.36
+
+linelist %>% 
+	summarise(sd(incubation_period, na.rm = T))
+#7.38
 ```
 
-### Calculating median incubation period
-```{r}
-linelist %>%
-	summarise(median(incubation_period, na.rm = T))
-#24
-```
-
-### Calculating mean ill duration
+### Calculating Mean and SD for Ill Duration
 ```{r}
 linelist %>%
 	summarise(mean(illness_duration, na.rm = T))
 #25.02
-```
 
-
-### Calculating median ill duration
-```{r}
 linelist %>%
-	summarise(median(illness_duration, na.rm = T))
-#26
+	summarise(sd(illness_duration, na.rm = T))
+#9.09
 ```
+
+
 Serial Interval
 ```{r}
 serial <- raw_data[, c("case_id", "infectedby", "date_of_exposure", "time_of_exposure", "how_many_hours_after_exposure_did_you_develop_symptoms")]
@@ -122,25 +117,30 @@ serial <- serial[, !(names(serial) %in% c("how_many_hours_after_exposure_did_you
 #Get infector and infected columns
 merged_data <- merge(serial, serial, by.x = "infectedby", by.y = "case_id", suffixes = c("_infected", "_infector"))
 
-#Calculate serial interval
+#Calculate serial interval in days
 merged_data$serial_interval_in_days <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "days"))
 
+#Calculate serial interval in hours
 merged_data$serial_interval_in_hours <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "hours"))
 
+#Calculate serial interval in minutes
 merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
 
-mean(merged_data$serial_interval_in_mins, na.rm = T)
-median(merged_data$serial_interval_in_mins, na.rm = T)
+serial_interval_in_days_average<- mean(merged_data$serial_interval_in_days, na.rm = T)
 
-mean(merged_data$serial_interval_in_days, na.rm = T)
+serial_interval_in_days_sd<- sd(merged_data$serial_interval_in_days, na.rm = T)
 
+serial_interval_in_hours_average<- mean(merged_data$serial_interval_in_hours, na.rm = T)
 
+serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T)
 ```
-#Calculating Mean Latent Period
+#Calculating Mean and SD for Latent Period
 ```{r}
 serial$latent <- serial$date_time_symptom_onset - serial$date_time_exposure
-mean_latent <- mean(serial$latent, na.rm = TRUE)
-print(mean_latent)
+mean(serial$latent, na.rm = TRUE)
+#23.26
+sd(serial$latent, na.rm = TRUE)
+#7.38
 ```
 
 
@@ -157,7 +157,7 @@ summary(incubation_fit_ln_duration)
 
 denscomp(incubation_fit_ln_duration)
 ```
-#Generating Plots for illness_duration
+#Generating Plots for Illness Duration
 ```{r}
 # Filter incubation periods
 illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
@@ -231,15 +231,21 @@ mean_time <- d %>%
   summarise(mean = mean(time_between_symptoms_last_contact, na.rm = T))
 ```
 
-
+#Outlier Detection for Infectious Prior to symptom onset
 ```{r}
 d2 <- d[, c("case_id","infectedby","exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5","date_time_symptom_onset")]
-# Assuming 'd2' is your data frame
+
+d2 <- merge(d2, raw_data[, c("case_id", "how_many_hours_after_your_symptom_onset_did_you_feel_better")], by = "case_id", all.x = TRUE)
+
+d2$date_time_recovery <- d2$date_time_symptom_onset +
+  as.difftime(d2$how_many_hours_after_your_symptom_onset_did_you_feel_better, units = "hours")
+
+
 date_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset")
 
 d2[date_columns] <- lapply(d2[date_columns], function(x) as.POSIXct(x, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"))
 
-# Create a new variable 'outlier'
+#New variable outlier
 d2$outlier <- ifelse(d2$date_time_symptom_onset < do.call(pmin, c(d2[, c("exposure1", "exposure2", "exposure3", "exposure4", "exposure5")], na.rm = TRUE)), 0, 1)
 
 d3 <- d2 %>% 
@@ -249,6 +255,19 @@ outlier_vector <- d3$case_id
 
 print(outlier_vector)
 ```
+#Outlier Detection for Infectious Prior after recovery
+```{r}
+#New variable outlier
+d2$outlier2 <- ifelse(d2$date_time_recovery < do.call(pmax, c(d2[, c("exposure1", "exposure2", "exposure3", "exposure4", "exposure5")], na.rm = TRUE)), 0, 1)
+
+d4 <- d2 %>% 
+	filter(outlier2 == 1)
+
+outlier_vector2 <- d4$case_id
+
+print(outlier_vector2)
+```
+
 Infectious Period(symptom onset to symptom recovery)
 ```{r}
 #Convert exposure to Date_Time Format
@@ -272,4 +291,4 @@ infectious <- infectious[, !(names(infectious) %in% c("how_many_hours_after_your
 infectious$infectious_period <- infectious$date_time_recovery -infectious$date_time_symptom_onset
 	
 ```
-
+need to adapt this so that we include people that are infecting prior to symptom onset and people that infecting after recovery date.
