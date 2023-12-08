@@ -462,19 +462,29 @@ r0_4 <- linelist %>%
 
 # Modeling
 
-## Equations
+## SEIR Equations
+
+$\frac{dS}{dt} = -\lambda_t S$
+
+$\frac{dE}{dt} = \lambda_t S - \gamma E$
+
+$\frac{dI}{dt} = \gamma E - \sigma I$
+
+$\frac{dR}{dt} = \sigma I$
+
+## Waning Immunity Equations
 
 $\frac{dS}{dt} = \omega R -\lambda_t S$
 
 $\frac{dE}{dt} = \lambda_t S - \gamma E$
 
-$\frac{dI}{dt} = \gamma E - \sigma I - \mu I$
+$\frac{dI}{dt} = \gamma E - 0.65 \sigma I - 0.35 \mu I$
 
-$\frac{dR}{dt} = \sigma I - \omega R$
+$\frac{dR}{dt} = 0.65 \sigma I - \omega R$
 
-$\frac{dR_s}{dt} = \mu I$
+$\frac{dR_s}{dt} = 0.35 \mu I$
 
-## Create Model
+## Observed Data
 
 ```{r}
 mean_duration_severe <- linelist %>%
@@ -491,6 +501,9 @@ mean_duration_nonsevere <- linelist %>%
 
 mean_latent <- as.numeric(mean_latent)
 #23.36364
+
+
+
 ```
 
 ```{r}
@@ -498,22 +511,22 @@ mean_latent <- as.numeric(mean_latent)
 sir_ode <- function(times,init,parms){
   with(as.list(c(parms,init)), {
     # ODEs
-    dS <- omega*R - (alpha*beta*I*S/(S+E+I+R))
-    dE <- (alpha*beta*I*S/(S+E+I+R)) - gamma*E
-    dI <- gamma*E - sigma*I - mu*I
-    dR <- sigma*I  - omega*R
-    dRs <- mu*I
-    list(c(dS,dE,dI,dR, dRs))
+    dS <- (omega*R) - (alpha*beta*I*S/(S+E+I+R))
+    dE <- (alpha*beta*I*S/(S+E+I+R)) - (gamma*E)
+    dI <- (gamma*E) - (0.65*sigma*I) - (0.35*mu*I)
+    dR <- (0.65*sigma*I)  - (omega*R)
+    dRs <- 0.35*mu*I
+    list(c(dS,dE,dI,dR,dRs))
   })
 }
 
 #Define parameters
 parms <- c(alpha = 5,              # alpha = daily contacts
-           beta = 0.62,             # beta = probability of infection on contact
+           beta = 0.26,             # beta = probability of infection on contact
 				 	 gamma = 1/(mean_latent/24),  # gamma = rate of infectiousness onset
-           sigma = 1/(mean_duration/24),# sigma = rate of recovery per day
-           mu = 0.0,               # mu = rate of severe disease
-           omega = 0.0)            # omega = rate of immune loss per day
+           sigma = 1/(mean_duration_nonsevere/24),# sigma = rate of recovery per day
+           mu = 1/(mean_duration_severe/24),               # mu = rate of severe disease
+           omega = 0)            # omega = rate of immune loss per day
 
 #Set initial conditions
 init <- c(S = 153,
@@ -525,11 +538,8 @@ init <- c(S = 153,
 times <- seq(0, 30, length.out=30)
 sir_out <- lsoda(init,times,sir_ode,parms)
 sir_out_long <- melt(as.data.frame(sir_out),"time")
-```
 
-## Plot the model output
-
-```{r}
+#Plot the model output
 sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
 	geom_line(lwd = 2) +
   labs(x = "Time since index case exposure (days)",
@@ -548,4 +558,94 @@ sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
 										 					 "R" = as.character(palette["red"]),
 										 					 "R_s" = as.character(palette["dark_red"]))) +
 	theme(panel.grid = element_blank())
+
+as.numeric(sir_out_long %>% 
+	filter(variable == "R") %>% 
+	summarize(max(value))) +
+	as.numeric(sir_out_long %>% 
+	filter(variable == "R_s") %>% 
+	summarize(max(value)))
+```
+
+## Waning Immunity
+
+```{r}
+mean_duration_severe <- linelist %>%
+	filter(severe == 1) %>%
+	summarize(mean = mean(illness_duration, na.rm = TRUE)) %>% 
+	as.numeric()
+#24.39286
+
+mean_duration_nonsevere <- linelist %>%
+	filter(severe == 0) %>%
+	summarize(mean = mean(illness_duration, na.rm = TRUE)) %>% 
+	as.numeric()
+#25.66667
+
+mean_latent <- as.numeric(mean_latent)
+#23.36364
+
+
+
+```
+
+```{r}
+#Create function for model equations
+sir_ode <- function(times,init,parms){
+  with(as.list(c(parms,init)), {
+    # ODEs
+    dS <- (omega*R) - (alpha*beta*I*S/(S+E+I+R))
+    dE <- (alpha*beta*I*S/(S+E+I+R)) - (gamma*E)
+    dI <- (gamma*E) - (0.65*sigma*I) - (0.35*mu*I)
+    dR <- (0.65*sigma*I)  - (omega*R)
+    dRs <- 0.35*mu*I
+    list(c(dS,dE,dI,dR,dRs))
+  })
+}
+
+#Define parameters
+parms <- c(alpha = 5,              # alpha = daily contacts
+           beta = 0.26,             # beta = probability of infection on contact
+				 	 gamma = 1/(mean_latent/24),  # gamma = rate of infectiousness onset
+           sigma = 1/(mean_duration_nonsevere/24),# sigma = rate of recovery per day
+           mu = 1/(mean_duration_severe/24),               # mu = rate of severe disease
+           omega = 0)            # omega = rate of immune loss per day
+
+#Set initial conditions
+init <- c(S = 153,
+					E = 0,
+					I = 1,
+					R = 0,
+					R_s = 0)
+
+times <- seq(0, 30, length.out=30)
+sir_out <- lsoda(init,times,sir_ode,parms)
+sir_out_long <- melt(as.data.frame(sir_out),"time")
+
+#Plot the model output
+sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
+	geom_line(lwd = 2) +
+  labs(x = "Time since index case exposure (days)",
+  		 y = "Number of cases",
+  		 title = "SEIR Model of RFF") +
+	scale_color_manual(name = "Class",
+										 breaks = c("S", "E", "I", "R", "R_s"),
+										 labels = c("Susceptible",
+										 					"Exposed",
+										 					"Infectious",
+										 					"Recovered",
+										 					"Became severe"),
+										 values = c("S" = as.character(palette["blue"]),
+										 					 "E" = as.character(palette["dark_green"]),
+										 					 "I" = as.character(palette["green"]),
+										 					 "R" = as.character(palette["red"]),
+										 					 "R_s" = as.character(palette["dark_red"]))) +
+	theme(panel.grid = element_blank())
+
+as.numeric(sir_out_long %>% 
+	filter(variable == "R") %>% 
+	summarize(max(value))) +
+	as.numeric(sir_out_long %>% 
+	filter(variable == "R_s") %>% 
+	summarize(max(value)))
 ```
