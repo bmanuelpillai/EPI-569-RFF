@@ -92,7 +92,7 @@ linelist <- raw_data %>%
 ```{r}
 total_pop <- nrow(roster)
 total_cases <- nrow(linelist)
-palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467", "#49494B", "#1C3052", "#24525A", "#548135", "#0D3840")
+palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467", "#49494B", "#1C3052", "#24525A", "#548135", "#0D3840", "#722C21")
 names(palette) <- c("blue",
 										"green",
 										"red",
@@ -101,7 +101,8 @@ names(palette) <- c("blue",
 										"dark_blue",
 										"gray_blue",
 										"dark_green",
-										"dark_gray_blue")
+										"dark_gray_blue",
+										"dark_red")
 ```
 
 # Table 1
@@ -530,9 +531,21 @@ sir_out_long <- melt(as.data.frame(sir_out),"time")
 ```{r}
 sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
 	geom_line(lwd = 2) +
-  xlab("Time") +
-	ylab("Number") +
-  ggtitle("I=0") +
-	theme(plot.title = element_text(hjust = 0.5))
+  labs(x = "Time since index case exposure (days)",
+  		 y = "Number of cases",
+  		 title = "SEIR Model of RFF") +
+	scale_color_manual(name = "Class",
+										 breaks = c("S", "E", "I", "R", "R_s"),
+										 labels = c("Susceptible",
+										 					"Exposed",
+										 					"Infectious",
+										 					"Recovered",
+										 					"Became severe"),
+										 values = c("S" = as.character(palette["blue"]),
+										 					 "E" = as.character(palette["dark_green"]),
+										 					 "I" = as.character(palette["green"]),
+										 					 "R" = as.character(palette["red"]),
+										 					 "R_s" = as.character(palette["dark_red"]))) +
+	theme(panel.grid = element_blank())
 ```
 
