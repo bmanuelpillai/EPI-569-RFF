@@ -511,29 +511,27 @@ mean_latent <- as.numeric(mean_latent)
 sir_ode <- function(times,init,parms){
   with(as.list(c(parms,init)), {
     # ODEs
-    dS <- (omega*R) - (alpha*beta*I*S/(S+E+I+R))
+    dS <- - (alpha*beta*I*S/(S+E+I+R))
     dE <- (alpha*beta*I*S/(S+E+I+R)) - (gamma*E)
-    dI <- (gamma*E) - (0.65*sigma*I) - (0.35*mu*I)
-    dR <- (0.65*sigma*I)  - (omega*R)
-    dRs <- 0.35*mu*I
-    list(c(dS,dE,dI,dR,dRs))
+    dI <- (gamma*E) - (sigma*I)
+    dR <- (sigma*I)
+    list(c(dS,dE,dI,dR))
   })
 }
 
 #Define parameters
 parms <- c(alpha = 5,              # alpha = daily contacts
-           beta = 0.26,             # beta = probability of infection on contact
+           beta = 0.62,             # beta = probability of infection on contact
 				 	 gamma = 1/(mean_latent/24),  # gamma = rate of infectiousness onset
-           sigma = 1/(mean_duration_nonsevere/24),# sigma = rate of recovery per day
-           mu = 1/(mean_duration_severe/24),               # mu = rate of severe disease
+           sigma = 1/(mean_duration/24),# sigma = rate of recovery per day
+           mu = 0,               # mu = rate of severe disease
            omega = 0)            # omega = rate of immune loss per day
 
 #Set initial conditions
 init <- c(S = 153,
 					E = 0,
 					I = 1,
-					R = 0,
-					R_s = 0)
+					R = 0)
 
 times <- seq(0, 30, length.out=30)
 sir_out <- lsoda(init,times,sir_ode,parms)
@@ -546,24 +544,19 @@ sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
   		 y = "Number of cases",
   		 title = "SEIR Model of RFF") +
 	scale_color_manual(name = "Class",
-										 breaks = c("S", "E", "I", "R", "R_s"),
+										 breaks = c("S", "E", "I", "R"),
 										 labels = c("Susceptible",
 										 					"Exposed",
 										 					"Infectious",
-										 					"Recovered",
-										 					"Became severe"),
+										 					"Recovered"),
 										 values = c("S" = as.character(palette["blue"]),
 										 					 "E" = as.character(palette["dark_green"]),
 										 					 "I" = as.character(palette["green"]),
-										 					 "R" = as.character(palette["red"]),
-										 					 "R_s" = as.character(palette["dark_red"]))) +
+										 					 "R" = as.character(palette["red"]))) +
 	theme(panel.grid = element_blank())
 
 as.numeric(sir_out_long %>% 
 	filter(variable == "R") %>% 
-	summarize(max(value))) +
-	as.numeric(sir_out_long %>% 
-	filter(variable == "R_s") %>% 
 	summarize(max(value)))
 ```
 
