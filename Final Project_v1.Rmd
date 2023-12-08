@@ -267,81 +267,29 @@ plot3 <- ggplot(epicurve4, aes(x = date)) +
 plot3
 ```
 
-# Natural History Parameters
-
-<<<<<<< HEAD
 **Plot epi curve using only symptom onset dates for observed (symptomatic) cases**
 
 ```{r}
-epicurve4 <- as.data.frame(linelist %>% 
+epicurve5 <- as.data.frame(linelist %>% 
 													 	filter(symptomatic == 1) %>% 
                             group_by(onset) %>%
                             summarize(incidence=n()))
 
 #Plot epi curve 
-plot5 <- epicurve4 %>% 
+plot5 <- epicurve5 %>% 
   ggplot(aes(x = onset, y = incidence, labs = FALSE)) + 
-  geom_bar(stat="identity", fill="gray45") +
+  geom_bar(stat="identity", fill=palette["dark_gray_blue"]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%b %d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Symptom Onset Date",
        y = "Number of Cases",
-       title = "Epi Curve for Rollins Fall Fever")
+       title = "Epi Curve by Onset Date for Symptomatic Cases of Rollins Fall Fever")
 plot5
 ```
 
-## Natural History
+# Natural History
 
-
-
-## Reproduction Numbers
-```{r}
-start_day <- date("2023-10-11")
-end_day <- date("2023-10-20")
-```
-
-We used the initial growth rate method to calculate $R_0$ from the plot of the log cases based on exposure date. The first case on RFF was observed on `r start_day`. Using the plot of log cases, the log-linear growth period ends on `r end_day`.
-
-$I(t) \approx I(0) e^{rt}$
-
-```{r}
-linear_growth <- epicurve %>% 
-	filter(exposure_date %in% c(start_day, end_day))
-
-plot2 +
-	geom_line(data = linear_growth,
-						mapping = aes(x = exposure_date, y = log_cases),
-						color = "darkred",
-						linewidth = 1.5)
-```
-```{r}
-r0_df <- epicurve %>%
-	filter(exposure_date >= start_day, exposure_date <= end_day) %>% 
-	splitstackshape::expandRows("incidence", drop = FALSE) %>% 
-	select(exposure_date) %>% 
-	pull(exposure_date)
-
-i <- incidence(r0_df)
-mu <- 1.81 #replace with mean generation time
-sigma <- 2.18 #replace with standard deviation of generation time
-
-res <- get_R(i, si_mean = mu, si_sd = sigma)
-R_val <- sample_R(res, 1000)
-r0 <- mean(R_val)
-```
-
-Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, is `r round(r0, 1)`.
-
-We can compare this value to the $R_0$ calculated based purely on the number of people that each individual exposed.
-
-```{r}
-r0_2 <- mean(linelist$n_contacts)
-```
-
-
-## Modeling
-=======
 ## Incubation period
 ```{r}
 mean_incubation <- linelist %>%
@@ -358,7 +306,6 @@ sd_incubation <- linelist %>%
 mean_duration <- linelist %>%
 	summarise(mean(illness_duration, na.rm = T))
 #25.02
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
 
 ds_duration <- linelist %>%
 	summarise(sd(illness_duration, na.rm = T))
@@ -425,11 +372,14 @@ $I(t) \approx I(0) e^{rt}$
 ```{r}
 linear_growth <- epicurve3 %>% 
 	filter(exposure_date %in% c(start_day, end_day))
-plot2 +
+
+plot6 <- plot2 +
 	geom_line(data = linear_growth,
 						mapping = aes(x = exposure_date, y = log_cases),
-						color = palette[2],
-						linewidth = 1.5)
+						color = palette["green"],
+						linewidth = 1.5,
+						linetype = "dashed")
+plot6
 ```
 
 ```{r}
