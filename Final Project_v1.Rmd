@@ -351,7 +351,7 @@ serial_interval_in_hours_average<- mean(merged_data$serial_interval_in_hours, na
 serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T)
 ```
 
-	# Latent Period
+## Latent Period
 ```{r}
 serial$latent <- serial$date_time_symptom_onset - serial$date_time_exposure
 mean_latent <- mean(serial$latent, na.rm = TRUE)
@@ -396,6 +396,8 @@ sigma <- serial_interval_in_days_sd #replace with standard deviation of generati
 res <- get_R(i, si_mean = mu, si_sd = sigma)
 R_val <- sample_R(res, 1000)
 r0 <- mean(R_val)
+r0
+#~2.42
 ```
 
 Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, is `r round(r0, 1)`.
@@ -403,6 +405,12 @@ Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, 
 We can compare this value to the $R_0$ calculated based purely on the number of people that each individual exposed.
 
 ```{r}
-r0_2 <- mean(linelist$n_contacts)
+r0_2 <- mean(linelist$n_contacts, na.rm = TRUE)
+#2.04
+
+#By symptom status
+r0_3 <- linelist %>% 
+	group_by(symptomatic) %>% 
+	summarize(r0 = mean(n_contacts, na.rm = TRUE))
 ```
 
