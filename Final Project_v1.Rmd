@@ -20,14 +20,10 @@ pacman::p_load(tidyverse,
                dplyr,
 							 splitstackshape,
 							 earlyR,
-<<<<<<< HEAD
-							 incidence)
-=======
 							 incidence,
 							 fitdistrplus,
 							 EpiEstim,
 							 ggpubr)
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
 ```
 
 ### Load data
@@ -93,17 +89,21 @@ linelist <- raw_data %>%
 ### Important values
 ```{r}
 total_pop <- nrow(roster)
-palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467")
+palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467", "#49494B", "#1C3052", "#24525A", "#548135", "#0D3840")
+names(palette) <- c("blue",
+										"green",
+										"red",
+										"gray",
+										"dark_gray",
+										"dark_blue",
+										"gray_blue",
+										"dark_green",
+										"dark_gray_blue")
 ```
-
-<<<<<<< HEAD
-***Onset and recovered variable***
-=======
 
 # Plot Epi Curve
 
 ## Onset and recovery
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
 
 ```{r}
 med_incubation <- median(linelist$incubation_period, na.rm = TRUE)
@@ -125,40 +125,25 @@ linelist <- linelist %>%
 															 (symptomatic == 1 & severe == 0) ~ onset + hours(illness_duration),
 															 TRUE ~ NA)) %>% 
 	mutate(recovered = date(recovered))
-<<<<<<< HEAD
-
-=======
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
 ```
 
 
 ## Epi curve by onset date
 
 ```{r}
-<<<<<<< HEAD
-#Create data frame for epi curve with exposure date and incidence
-epicurve <- as.data.frame(linelist %>% 
-                            group_by(exposure_date) %>%
-=======
 #Create data frame for epi curve with onset and incidence
 epicurve1 <- as.data.frame(linelist %>% 
                             group_by(onset) %>%
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
                             summarize(incidence=n()))
 #Plot epi curve 
-<<<<<<< HEAD
-plot1 <- epicurve %>% 
-  ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
-  geom_bar(stat="identity", fill="gray45") +
-=======
 plot1 <- epicurve1 %>% 
-  ggplot(aes(x = onset, y = incidence, labs = FALSE)) + 
-  geom_bar(stat="identity", fill=palette[4]) +
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
+	ggplot(aes(x = onset, y = incidence, labs = FALSE)) + 
+  geom_bar(stat="identity", fill=palette["dark_gray_blue"]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Exposure Date",
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  			panel.grid = element_blank()) +
+  labs(x = "Onset Date",
        y = "Number of Cases",
        title = "Epi Curve for Rollins Fall Fever")
 plot1
@@ -172,16 +157,17 @@ epicurve2 <- as.data.frame(linelist %>%
                             summarize(incidence=n()))
 
 #Plot epi curve 
-plot4 <- epicurve2 %>% 
+plot2 <- epicurve2 %>% 
   ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
-  geom_bar(stat="identity", fill=palette[4]) +
+  geom_bar(stat="identity", fill=palette["dark_gray_blue"]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  			panel.grid = element_blank()) +
   labs(x = "Exposure Date",
        y = "Number of Cases",
        title = "Epi Curve for Rollins Fall Fever")
-plot4
+plot2
 ```
 
 ## Log cases
@@ -191,28 +177,20 @@ epicurve3 <- epicurve2 %>%
   mutate(log_cases = log(incidence))
 
 #Plot log cases
-<<<<<<< HEAD
-plot2 <- epicurve %>% 
-  ggplot(aes(x = exposure_date, y = log_cases, labs = FALSE)) + 
-  geom_bar(stat="identity", fill="gray45") +
-=======
 plot2 <- epicurve3 %>% 
   ggplot(aes(x = exposure_date, y = log_cases, labs = FALSE)) + 
-  geom_bar(stat="identity", fill=palette[4]) +
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
+  geom_bar(stat="identity", fill=palette["dark_gray_blue"]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous() +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  			panel.grid = element_blank()) +
   labs(x = "Exposure Date",
        y = "Log Cases",
        title = "Epi Curve - Log Cases")
 plot2
 ```
 
-<<<<<<< HEAD
-=======
 ## Susceptible, infected, recovered by day
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
 ***Calculate number of recovered by day***
 
 ```{r}
@@ -244,11 +222,7 @@ infected2 <- data.frame(date = dateseq, n_infected = as.numeric(infectedseq))
 
 ```{r}
 #Join infected and recovered datasets
-<<<<<<< HEAD
-epicurve2 <- infected2 %>% 
-=======
 epicurve4 <- infected2 %>% 
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
   full_join(recovered, by = c("date" = "recovered")) %>% 
 	full_join(infected, by = c("date" = "exposure_date")) %>% 
 	#Set na values to zero 
@@ -260,12 +234,7 @@ epicurve4 <- infected2 %>%
   mutate(total_infected = cumsum(n_exposed))
 
 #Calculate number of people susceptible 
-<<<<<<< HEAD
-total_pop <- nrow(roster)
-epicurve2 <- epicurve2 %>% 
-=======
 epicurve4 <- epicurve4 %>% 
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
   mutate(n_susceptible = total_pop - total_infected) %>% 
 	#Check that the total population size is stable
 	mutate(total = n_infected + total_recovered + n_susceptible)
@@ -274,62 +243,30 @@ epicurve4 <- epicurve4 %>%
 ***Plot susceptible, infected, and recovered by day***
 
 ```{r}
-<<<<<<< HEAD
-plot3 <- ggplot(epicurve2, aes(x = date)) +
-=======
 plot3 <- ggplot(epicurve4, aes(x = date)) +
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
-  geom_line(aes(y = n_susceptible, color = "Susceptible"), linewidth = 1) +
-  geom_line(aes(y = n_infected, color = "Infected"), linewidth = 1) +
-  geom_line(aes(y = total_recovered, color = "Recovered"), linewidth = 1) +
+  geom_line(aes(y = n_susceptible, color = "Susceptible"), linewidth = 2) +
+  geom_line(aes(y = n_infected, color = "Infected"), linewidth = 2) +
+  geom_line(aes(y = total_recovered, color = "Recovered"), linewidth = 2) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Date",
        y = "Number of Cases",
        title = "Epi Curve for Rollins Fall Fever") +
-  scale_color_manual(name='Class',
-                     breaks=c('Susceptible', 'Infected', 'Recovered'),
-<<<<<<< HEAD
-                     values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
-=======
-                     values=c('Susceptible'=palette[1], 'Infected'=palette[2], 'Recovered'=palette[3])) +
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
+  scale_color_manual(name = "Class",
+                     breaks = c("Susceptible", "Infected", "Recovered"),
+                     values = c("Susceptible" = as.character(palette["blue"]),
+                     				    "Infected" = as.character(palette["green"]),
+                     				    "Recovered" = as.character(palette["red"]))) +
 	scale_x_date(breaks = "2 days",
-							 date_labels = "%b %d") +
+							 date_labels = "%b %d",
+							 expand = c(0.05,0,0.15, 0.15)) +
   theme(legend.title = element_text(size = 15),
         legend.text = element_text(size = 8),
-  			panel.grid.minor = element_blank())
-<<<<<<< HEAD
+  			legend.key = element_rect(fill = "white"),
+  			panel.grid = element_blank())
 
 plot3
 ```
 
-***Wanted to see how a percent Epi Curve would look. I havent seen the data presented this way in class though***
-
-```{r}
-epicurve3 <- epicurve2 %>% 
-	mutate(susceptible2 = susceptible/153) %>% 
-	mutate(n_infected2 = n_infected/153) %>% 
-	mutate(total_recovered2 = total_recovered/153)
-
-plot4 <- ggplot(epicurve3, aes(x = date)) +
-  geom_line(aes(y = susceptible2, color = "Susceptible")) +
-  geom_line(aes(y = n_infected2, color = "Infected")) +
-  geom_line(aes(y = total_recovered2, color = "Recovered")) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Date",
-       y = "Proportion of Total Population",
-       title = "Epi Curve for Rollins Fall Fever") +
-  scale_color_manual(name='Class',
-                     breaks=c('Susceptible', 'Infected', 'Recovered'),
-                     values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
-  theme(legend.title = element_text(size = 15),
-        legend.text = element_text(size = 8))
-
-plot4
-=======
-plot3
->>>>>>> c25c618ad12af0ec6d2068bf563befa9bec7e8d7
-```
 # Natural History Parameters
 
 <<<<<<< HEAD
