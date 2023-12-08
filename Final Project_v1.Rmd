@@ -281,7 +281,8 @@ plot5 <- epicurve5 %>%
   geom_bar(stat="identity", fill=palette["dark_gray_blue"]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%b %d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1),
+  			panel.grid = element_blank()) +
   labs(x = "Symptom Onset Date",
        y = "Number of Cases",
        title = "Epi Curve by Onset Date for Symptomatic Cases of Rollins Fall Fever")
