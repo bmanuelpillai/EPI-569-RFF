@@ -23,7 +23,9 @@ pacman::p_load(tidyverse,
 							 incidence,
 							 fitdistrplus,
 							 EpiEstim,
-							 ggpubr)
+							 ggpubr,
+							 deSolve,
+							 reshape2)
 ```
 
 ### Load data
@@ -455,3 +457,51 @@ r0_4 <- linelist %>%
 						count = n())
 ```
 
+# Modeling
+
+## Equations
+
+$\frac{dS}{dt} = \omega R -\lambda_t S$
+
+$\frac{dE}{dt} = \lambda_t S - \gamma E$
+
+$\frac{dI}{dt} = \gamma E - \sigma I - \mu I$
+
+$\frac{dR}{dt} = \sigma I - \omega R$
+
+$\frac{dR_s}{dt} = \mu I$
+
+## Create Model
+```{r}
+#Create function for model equations
+sir_ode <- function(times,init,parms){
+  with(as.list(c(parms,init)), {
+    # ODEs
+    dS <- omega*R - (alpha*beta*I*S/(S+E+I+R))
+    dE <- (alpha*beta*I*S/(S+E+I+R)) - gamma*E
+    dI <- gamma*E - sigma*I - mu*I
+    dR <- sigma*I  - omega*R
+    dRs <- mu*I
+    list(c(dS,dE,dI,dR, dRs))
+  })
+}
+
+#Define parameters
+parms <- c(alpha = 5,        # alpha = daily contacts
+           beta = 0.1,       # beta = probability of infection on contact
+				 	 gamma = 0.2,       # gamma = rate of infectiousness onset
+           sigma = 0.2,      # sigma = rate of recovery per day
+           mu = 0.0,         # mu = rate of severe disease
+           omega = 0.0)      # omega = rate of immune loss per day
+
+#Set initial conditions
+init <- c(S = 153,
+					E = 0,
+					I = 1,
+					R = 0,
+					R_s = 0)
+
+times <- seq(0, 30, length.out=30)
+sir_out <- lsoda(init,times,sir_ode,parms)
+sir_out_long <- melt(as.data.frame(sir_out),"time")
+```
