@@ -3,8 +3,6 @@ title: "EPI 569 Final Project"
 author: "Meghna Ray, Charlotte Doran, and Bevin Manuelpillai"
 date: "`r Sys.Date()`"
 output: html_document
-execute:
-	cache: true
 ---
 
 # Setup
@@ -89,6 +87,7 @@ linelist <- raw_data %>%
 ```
 
 ### Important values
+
 ```{r}
 total_pop <- nrow(roster)
 total_cases <- nrow(linelist)
@@ -106,6 +105,7 @@ names(palette) <- c("blue",
 ```
 
 # Table 1
+
 ```{r}
 roster %>% 
 	group_by(course) %>% 
@@ -163,7 +163,6 @@ linelist <- linelist %>%
 															 TRUE ~ NA)) %>% 
 	mutate(recovered = date(recovered))
 ```
-
 
 ## Epi curve by onset date
 
@@ -228,6 +227,7 @@ plot2
 ```
 
 ## Susceptible, infected, recovered by day
+
 ***Calculate number of recovered by day***
 
 ```{r}
@@ -329,6 +329,7 @@ plot5
 # Natural History
 
 ## Incubation period
+
 ```{r}
 mean_incubation <- linelist %>%
 	summarise(mean(incubation_period, na.rm = T))
@@ -340,6 +341,7 @@ sd_incubation <- linelist %>%
 ```
 
 ## Illness duration
+
 ```{r}
 mean_duration <- linelist %>%
 	summarise(mean(illness_duration, na.rm = T))
@@ -389,6 +391,7 @@ serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T
 ```
 
 ## Latent Period
+
 ```{r}
 serial$latent <- serial$date_time_symptom_onset - serial$date_time_exposure
 mean_latent <- mean(serial$latent, na.rm = TRUE)
@@ -397,15 +400,14 @@ ds_latent <- sd(serial$latent, na.rm = TRUE)
 #7.38
 ```
 
-
 # Reproduction Numbers
+
 ```{r}
 start_day <- date("2023-10-11")
 end_day <- date("2023-10-20")
 ```
 
-We used the initial growth rate method to calculate $R_0$ from the plot of the log cases based on exposure date. The first case on RFF was observed on `r start_day`. Using the plot of log cases, the log-linear growth period ends on `r end_day`.
-$I(t) \approx I(0) e^{rt}$
+We used the initial growth rate method to calculate $R_0$ from the plot of the log cases based on exposure date. The first case on RFF was observed on `r start_day`. Using the plot of log cases, the log-linear growth period ends on `r end_day`. $I(t) \approx I(0) e^{rt}$
 
 ```{r}
 linear_growth <- epicurve3 %>% 
@@ -491,7 +493,6 @@ mean_latent <- as.numeric(mean_latent)
 #23.36364
 ```
 
-
 ```{r}
 #Create function for model equations
 sir_ode <- function(times,init,parms){
@@ -526,8 +527,8 @@ sir_out <- lsoda(init,times,sir_ode,parms)
 sir_out_long <- melt(as.data.frame(sir_out),"time")
 ```
 
-
 ## Plot the model output
+
 ```{r}
 sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
 	geom_line(lwd = 2) +
@@ -548,4 +549,3 @@ sir_out_long %>% ggplot(aes(x=time, y=value, colour=variable, group=variable)) +
 										 					 "R_s" = as.character(palette["dark_red"]))) +
 	theme(panel.grid = element_blank())
 ```
-
