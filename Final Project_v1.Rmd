@@ -445,9 +445,49 @@ plot2 <- ggplot(data=plot2.data, aes(x=dates, y=I, labs=FALSE)) +
 plot2
 ```
 
-#Vaccination Thresholds 
+# Calculate critical vaccination thresholds
+
+$P_c = (1 - 1/R_0) / VE$ 
+
+$HIT = (1 - 1/R_0)$ 
+
+$P_c = HIT / VE$ 
+
+$R_0 = 2.41$ 
+
 ```{r}
 
-```
+R0 <- 2.41 
+HIT <- 1 - (1/R0)
+HIT
 
+#VE = 100%
+Pc_100 <- (HIT/1) *100
+Pc_100
+
+#VE = 90% 
+Pc_90 <- (HIT/0.9) *100
+Pc_90
+
+#VE = 80% 
+Pc_80 <- (HIT/0.8) *100
+Pc_80
+
+#VE = 70%
+Pc_70 <- (HIT/0.7) *100
+Pc_70
+
+#VE = 60%
+Pc_60 <- (HIT/0.6) *100
+Pc_60
+
+#VE = 50%
+Pc_50 <- (HIT/0.5) *100
+Pc_50
+
+#VE = 50%
+Pc_40 <- (HIT/0.4) *100
+Pc_40
+
+```
 
