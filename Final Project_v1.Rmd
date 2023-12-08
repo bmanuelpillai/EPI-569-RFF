@@ -411,6 +411,13 @@ r0_2 <- mean(linelist$n_contacts, na.rm = TRUE)
 #By symptom status
 r0_3 <- linelist %>% 
 	group_by(symptomatic) %>% 
-	summarize(r0 = mean(n_contacts, na.rm = TRUE))
+	summarize(r0 = mean(n_contacts, na.rm = TRUE),
+						count = n())
+
+#By severity
+r0_4 <- linelist %>% 
+	group_by(severe) %>% 
+	summarize(r0 = mean(n_contacts, na.rm = TRUE),
+						count = n())
 ```
 
