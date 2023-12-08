@@ -89,6 +89,7 @@ linelist <- raw_data %>%
 ### Important values
 ```{r}
 total_pop <- nrow(roster)
+total_cases <- nrow(linelist)
 palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467", "#49494B", "#1C3052", "#24525A", "#548135", "#0D3840")
 names(palette) <- c("blue",
 										"green",
@@ -99,6 +100,39 @@ names(palette) <- c("blue",
 										"gray_blue",
 										"dark_green",
 										"dark_gray_blue")
+```
+
+# Table 1
+```{r}
+roster %>% 
+	group_by(course) %>% 
+	summarize(count = n(),
+						percent = (count/total_pop) * 100)
+
+roster %>% 
+	group_by(program) %>% 
+	summarize(count = n(),
+						percent = (count/total_pop) * 100)
+
+linelist %>% 
+	group_by(symptomatic, severe) %>% 
+	summarize(count = n(),
+						percent = n()/total_cases * 100)
+
+linelist %>% 
+	filter(symptomatic == 1) %>% 
+	group_by(severe) %>% 
+	summarize(count = n(),
+						percent = count/sum(linelist$symptomatic, na.rm = TRUE) * 100)
+
+linelist_roster <- linelist %>% 
+	left_join(roster, by = c("case_id" = "case_id"))
+
+linelist_roster %>% 
+		group_by(course.y) %>% 
+		summarize(count = n(),
+							percent = (count/total_cases) * 100)
+
 ```
 
 # Plot Epi Curve
