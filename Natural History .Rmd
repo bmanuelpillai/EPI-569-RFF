@@ -1,0 +1,197 @@
+---
+title: "Natural History"
+output: html_document
+date: "2023-11-24"
+---
+
+***Load packages***
+```{r}
+pacman::p_load(tidyverse, 
+							 ggplot2,
+							 janitor,
+							 lubridate,
+							 dplyr,
+							 fitdistrplus)
+```
+
+### Load data
+```{r}
+raw_data <- readRDS('rff_finalcases_clean_2023.rds') %>% janitor::clean_names()
+roster <- readRDS('rosters_569_517_clean_2023.rds') %>%  janitor::clean_names()
+```
+
+### Data Cleaning 
+```{r}
+linelist <- raw_data %>% 
+	#rename variables 
+	rename(c('report' = 'reporting_time',
+					 'infector_id' = 'infectedby',
+					 'exposure_date' = 'date_of_exposure',
+					 'exposure_time' = 'time_of_exposure',
+					 'symptomatic' = 'did_you_have_symptoms',
+					 'incubation_period' = 'how_many_hours_after_exposure_did_you_develop_symptoms',
+					 'illness_duration' = 'how_many_hours_after_your_symptom_onset_did_you_feel_better',
+					 'n_contacts' = 'how_many_people_did_you_expose',
+					 'n_infect' = 'how_many_people_did_you_actually_infect',
+					 'contact1_id' = 'case_id_first_exposure',
+					 'contact1_date' = 'date_of_first_exposure',
+					 'contact1_time' = 'time_of_first_exposure',
+					 'contact2_id' = 'case_id_second_exposure',
+					 'contact2_date' = 'date_of_second_exposure',
+					 'contact2_time' = 'time_of_second_exposure',
+					 'contact3_id' = 'case_id_third_exposure',
+					 'contact3_date' = 'date_of_third_exposure',
+					 'contact3_time' = 'time_of_third_exposure',
+					 'contact4_id' = 'case_id_fourth_exposure',
+					 'contact4_date' = 'date_of_fourth_exposure',
+					 'contact4_time' = 'time_of_fourth_exposure',
+					 'contact5_id' = 'case_id_fifth_exposure',
+					 'contact5_date' = 'date_of_fifth_exposure',
+					 'contact5_time' = 'time_of_fifth_exposure',
+					 'exposure0' = 'date_time_exposure',
+					 'exposure1' = 'date_time_first_exposure',
+					 'exposure2' = 'date_time_second_exposure',
+					 'exposure3' = 'date_time_third_exposure',
+					 'exposure4' = 'date_time_fourth_exposure',
+					 'exposure5' = 'date_time_fifth_exposure')) %>% 
+	
+	#recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
+	mutate( gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
+	
+	#recode course variable as numeric (0 = EPI 569, 1 = EPI 517, 2 = both)
+	mutate(course = recode(course, "EPI 569 (Concepts and Methods in ID EPI)" = 0, 
+												 "EPI/GH 517 (Case Studies in ID)" = 1,
+												 "BOTH" = 2)) %>% 
+	
+	#recode symptomatic variable as numeric (0 = No, 1 = Yes)
+	mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1))
+
+```
+
+
+### Create Onset Variable
+```{r}
+#Create new onset variable using date and time of exposure + incubation period 
+linelist <- linelist %>% 
+	mutate(onset = exposure0 + incubation_period) %>% 
+	mutate(onset = date(onset))
+```
+
+### Calculating mean incubation period
+```{r}
+linelist %>%
+	summarise(mean(incubation_period, na.rm = T))
+#23.36
+```
+
+### Calculating median incubation period
+```{r}
+linelist %>%
+	summarise(median(incubation_period, na.rm = T))
+#24
+```
+
+### Calculating mean ill duration
+```{r}
+linelist %>%
+	summarise(mean(illness_duration, na.rm = T))
+#25.02
+```
+
+
+### Calculating median ill duration
+```{r}
+linelist %>%
+	summarise(median(illness_duration, na.rm = T))
+#26
+```
+
+
+Create a variable that subtracts the time of symptom onset in the primary case from the time of symptom onset in the secondary case
+
+Create a new variable that is time of symptom onset by adding time of exposure to how many hours after exposure did you devlop symptoms
+Convert date_of_exposure and time_of_exposure to POSIXct format
+
+### Serial Interval
+```{r}
+raw_data2 <- raw_data %>%
+  mutate(
+    datetime_of_exposure = as.POSIXct(paste(date_of_exposure, time_of_exposure), format="%Y-%m-%d %H:%M:%S"),
+    hours_to_symptoms = as.numeric(how_many_hours_after_exposure_did_you_develop_symptoms)
+  )
+```
+
+### Create a new variable for start of symptoms
+```{r}
+raw_data3 <- raw_data2 %>%
+  mutate(time_of_start_of_symptoms = datetime_of_exposure + hours_to_symptoms *3600)
+
+raw_data3 %>% 
+  select(date_of_exposure, time_of_exposure, how_many_hours_after_exposure_did_you_develop_symptoms, time_of_start_of_symptoms)
+```
+
+### Pairs ofinfected and infector
+```{r}
+merged_data <- merge(raw_data3, raw_data3, by.x = "infectedby", by.y = "case_id", suffixes = c("_infected", "_infector"))
+print(merged_data)
+
+
+```
+
+### Calculate the serial interval
+```{r}
+serial_interval <- merged_data %>%
+  filter(!is.na(infectedby) & time_of_start_of_symptoms_infected >= time_of_start_of_symptoms_infector) %>%
+  mutate(
+    serial_interval = time_of_start_of_symptoms_infected - time_of_start_of_symptoms_infector
+  ) %>%
+  select(serial_interval) %>%
+  pull()
+print(serial_interval)
+```
+
+```{r}
+merged_data2 <- merged_data %>% 
+  select(case_id, infectedby,datetime_of_exposure_infected, hours_to_symptoms_infected, time_of_start_of_symptoms_infected, datetime_of_exposure_infector, hours_to_symptoms_infector, time_of_start_of_symptoms_infector)
+```
+
+```{r}
+merged_data3 <- merged_data2 %>% 
+	mutate(serial_interval_time = time_of_start_of_symptoms_infected - time_of_start_of_symptoms_infector) %>% select(case_id, infectedby,time_of_start_of_symptoms_infected,time_of_start_of_symptoms_infector, serial_interval_time )
+```
+
+#Generating Plots for Incubation Period
+```{r}
+# Filter incubation periods
+incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
+
+# Fit a lognormal distribution
+incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
+
+# Summarize the fitted distribution
+summary(incubation_fit_ln_duration)
+
+denscomp(incubation_fit_ln_duration)
+```
+#Generating Plots for illness_duration
+```{r}
+# Filter incubation periods
+illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
+
+# Fit a lognormal distribution
+illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
+
+# Summarize the fitted distribution
+summary(illness_fit_ln_duration)
+
+denscomp(illness_fit_ln_duration)
+```
+
+
+
+#Calculating infectious period for each person
+```{r}
+
+```
+
+

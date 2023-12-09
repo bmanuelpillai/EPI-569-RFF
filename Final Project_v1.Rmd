@@ -120,7 +120,6 @@ linelist <- linelist %>%
 	mutate(recovered = date(recovered))
 ```
 
-
 ## Epi curve by onset date
 
 ```{r}
@@ -251,6 +250,7 @@ plot3 <- ggplot(epicurve4, aes(x = date)) +
   			panel.grid.minor = element_blank())
 plot3
 ```
+
 # Natural History Parameters
 
 Merge roster and linelist
@@ -303,6 +303,7 @@ sd(Non_Severe_cases$incubation_period)
 ```
 
 ## Illness duration
+
 ```{r}
 mean_duration <- linelist %>%
 	summarise(mean(illness_duration, na.rm = T))
@@ -345,7 +346,7 @@ linelist <- linelist %>%
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
 ```
 
-	# Latent Period
+## Latent Period
 ```{r}
 linelist$latent_period <- as.numeric(difftime(linelist$infectiousness_start, linelist$exposure0, units = "hours"))
 ```
@@ -730,5 +731,130 @@ We can compare this value to the $R_0$ calculated based purely on the number of 
 
 ```{r}
 r0_2 <- mean(linelist$n_contacts)
+```
+
+# Time-varying Reproductive Number (Rt)
+
+```{r}
+#Convert data to a format that can be used in the EpiEstim wallinga_teunis function 
+## Note: to calculate an Rt estimate for day 1 of the outbreak, we must start our epi curve 2 days prior the first symptom onset date
+
+epicurve5 <- epicurve2 %>%
+	arrange(exposure_date) %>% 
+	rename(date = exposure_date, I = incidence) %>% 
+	dplyr::select(date, I)
+
+all.dates <- as.data.frame(seq(as.Date("2023-10-09"), by = "day", length.out = 23)) 
+names(all.dates) <- "date"
+
+epicurve.epiestim <- merge(x=epicurve5, y=all.dates, by="date", all="TRUE")
+epicurve.epiestim <- epicurve.epiestim %>% mutate(I = ifelse(is.na(I), 0, I)) 
+
+#Estimate Rt, along with 95% confidence intervals for Rt estimates
+
+mean_si_days <- 41.12/24   
+std_si_days <- 47.15/24
+
+estimates <- wallinga_teunis(epicurve.epiestim$I, 
+                             method="parametric_si",
+                             config = list(t_start = seq(1, 23), 
+                                           t_end = seq(1, 23),
+                                           mean_si = mean_si_days, 
+                                           std_si = std_si_days, 
+                                           n_sim = 1000))
+
+#save estimates R to a new dataframe 
+#set zeros for where estimates are missing 
+
+estimates_R <- as.data.frame(estimates$R)
+	
+	
+estimates_R <- as.data.frame(estimates$R) %>%
+	rename(mean = `Mean(R)`,
+				 std = `Std(R)`,
+				 Q25 = `Quantile.0.025(R)`,
+				 Q975 = `Quantile.0.975(R)`) %>% 
+	rbind(data.frame(t_start = c(6, 7, 21),
+									 t_end = c(6, 7, 21),
+									 mean = 0,
+									 std = 0,
+									 Q25 = 0,
+									 Q975 = 0)) %>%
+	arrange(t_start)
+
+#Examine the serial interval distribution
+plot(estimates$si_distr, xlab="Serial Interval (Days)", ylab="Proportion")
+
+```
+
+Plot the R(t) estimates and 95% CIs over the epi curve
+
+```{r}
+plot2.data <- cbind(epicurve.epiestim[-(1:4),], estimates_R$mean,
+                    estimates_R$Q25, estimates_R$Q975)
+names(plot2.data) <- c("dates", "I", "R", "lowerCI", "upperCI")
+
+```
+
+```{r}
+plot2 <- ggplot(data=plot2.data, aes(x=dates, y=I, labs=FALSE)) + 
+  geom_bar(stat="identity", fill="#636467") +
+  scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
+  scale_y_continuous(breaks = seq(0,20, by = 2)) +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(x = "Exposure Date", 
+       y = "Number of Cases (bars) and Rt (line;95% CI)",
+       title = "Epi Curve for RFF Outbreak (Mean SI=1.7)") +
+  geom_hline(aes(yintercept=1), colour="#E28571", linetype="dashed", size=0.5) +
+  geom_errorbar(data=plot2.data, aes(ymax=upperCI, ymin=lowerCI, width=0.6),stat="identity", size=0.8, show.legend=FALSE) +
+  geom_line(data=plot2.data[!is.na(plot2.data$R),],aes(x=dates, y=R), color='#66B4BE', size=0.5) +
+  geom_point(data = plot2.data, aes(x=dates, y=R), size=1.2, show.legend=FALSE) 
+plot2
+```
+
+# Calculate critical vaccination thresholds
+
+$P_c = (1 - 1/R_0) / VE$ 
+
+$HIT = (1 - 1/R_0)$ 
+
+$P_c = HIT / VE$ 
+
+$R_0 = 2.41$ 
+
+```{r}
+
+R0 <- 2.41 
+HIT <- 1 - (1/R0)
+HIT
+
+#VE = 100%
+Pc_100 <- (HIT/1) *100
+Pc_100
+
+#VE = 90% 
+Pc_90 <- (HIT/0.9) *100
+Pc_90
+
+#VE = 80% 
+Pc_80 <- (HIT/0.8) *100
+Pc_80
+
+#VE = 70%
+Pc_70 <- (HIT/0.7) *100
+Pc_70
+
+#VE = 60%
+Pc_60 <- (HIT/0.6) *100
+Pc_60
+
+#VE = 50%
+Pc_50 <- (HIT/0.5) *100
+Pc_50
+
+#VE = 50%
+Pc_40 <- (HIT/0.4) *100
+Pc_40
+
 ```
 
