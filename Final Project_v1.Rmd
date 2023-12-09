@@ -490,7 +490,7 @@ summary(Serial_interval_fit_ln_duration)
 
 denscomp(Serial_interval_fit_ln_duration, main = "Density Plot of Serial Interval (Lognormal)")
 ```
-
+Log Distribution of Natural History Parameters
 ```{r}
 #Create Graph
 par(mfrow=c(1,4))
@@ -538,7 +538,7 @@ serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 denscomp(serial_interval_fit_ln_duration, main = "Serial Interval (hours)", xlab = "Serial Interval", ylab = "Density")
 
 ```
-
+Log Distribution of Natural History Parameters (Combined)
 ```{r}
 #Create Graph
 par(mfrow=c(1,1))
