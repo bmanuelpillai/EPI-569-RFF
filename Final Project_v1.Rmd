@@ -251,14 +251,14 @@ plot3 <- ggplot(epicurve4, aes(x = date)) +
 plot3
 ```
 
-# Natural History Parameters
+##Natural History Parameters
 
-Merge roster and linelist
+#Merge roster and linelist
 ```{r}
 full_data <- left_join(linelist, roster, by = "case_id")
 ```
 
-Subset to Severe and Non-severe RFF
+#Subset to Severe and Non-severe RFF
 ```{r}
 Severe <- full_data %>% 
 	filter(severe == 1)
@@ -266,8 +266,7 @@ Severe <- full_data %>%
 Non_Severe <- full_data %>% 
 	filter(severe == 0)
 ```
-
-Subset linelist to Severe and Non-severe RFF
+#Subset linelist to Severe and Non-severe RFF
 ```{r}
 Severe_cases <- linelist %>% 
 	filter(severe == 1)
@@ -276,7 +275,7 @@ Non_Severe_cases <- linelist %>%
 	filter(severe == 0)
 ```
 
-## Incubation period
+#Incubation period
 ```{r}
 mean_incubation <- linelist %>%
 	summarise(mean(incubation_period, na.rm = T))
@@ -287,7 +286,7 @@ sd_incubation <- linelist %>%
 #7.38
 ```
 
-## Incubation period for Severe cases and Non_severe cases
+#Incubation period for Severe cases and Non_severe cases
 ```{r}
 mean(Severe_cases$incubation_period)
 #23.43
@@ -302,8 +301,7 @@ sd(Non_Severe_cases$incubation_period)
 #8.43
 ```
 
-## Illness duration
-
+#Illness duration
 ```{r}
 mean_duration <- linelist %>%
 	summarise(mean(illness_duration, na.rm = T))
@@ -314,7 +312,7 @@ ds_duration <- linelist %>%
 #9.09
 ```
 
-	# Infectious Period
+#Infectious Period
 ```{r}
 # List of variables to convert
 date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset", "date_time_recovery", "severe_date")
@@ -346,12 +344,12 @@ linelist <- linelist %>%
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
 ```
 
-## Latent Period
+#Latent Period
 ```{r}
 linelist$latent_period <- as.numeric(difftime(linelist$infectiousness_start, linelist$exposure0, units = "hours"))
 ```
 
-	# Mean and SD for Infectious Period Stratified by symptom status and
+#Mean and SD for Infectious Period Stratified by symptom status and
 ```{r}
 # Infectious Period for symptomatic
 symptomatic <- linelist %>% 
@@ -366,8 +364,7 @@ mean(asymptomatic$infectious_period, na.rm = TRUE)
 sd(asymptomatic$infectious_period, na.rm = TRUE)
 ```
 
-
-
+#Natural History Stratified by Severity
 ```{r}
 # Infectious Period for Severe
 mean(Severe_cases$infectious_period, na.rm = TRUE)
@@ -382,7 +379,7 @@ mean(Severe_cases$latent_period, na.rm = TRUE)
 sd(Severe_cases$latent_period, na.rm = TRUE)
 ```
 
-## Serial interval (By symptom onset date)
+#Serial Interval (By symptom onset date)
 ```{r}
 #Get infector and infected columns
 merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id", suffixes = c("_infected", "_infector"))
@@ -405,7 +402,7 @@ print(serial_interval_in_hours_sd)
 merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
 ```
 
-## Serial interval (By infectiousness end date)
+#Serial Interval (By Infectiousness End Date)
 ```{r}
 #Get infector and infected columns
 merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id", suffixes = c("_infected", "_infector"))
@@ -426,7 +423,7 @@ print(serial_interval_in_hours_average2)
 print(serial_interval_in_hours_sd2)
 ```
 
-## Serial interval (By infectiousness start date)
+#Serial interval (By infectiousness start date)
 ```{r}
 #Calculate serial interval in hours
 merged_data$serial_interval_in_hours3 <- as.numeric(difftime(merged_data$infectiousness_start_infected, merged_data$infectiousness_start_infector, units = "hours"))
@@ -439,56 +436,54 @@ print(serial_interval_in_hours_sd3)
 ```
 #Generating Plots for Incubation Period
 ```{r}
-# Filter incubation periods
+#Filter incubation period
 incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
 
-# Fit a lognormal distribution
+#Fit distribution
 incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
-
-# Summarize the fitted distribution
 summary(incubation_fit_ln_duration)
 
+#Plot
 denscomp(incubation_fit_ln_duration, main = "Density Plot of Incubation Period (Lognormal)") 
 ```
 
 #Generating Plots for Illness Duration
 ```{r}
-# Filter illness durations periods
+#Filter illness periods
 illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
 
-# Fit a lognormal distribution
+#Fit distribution
 illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
 
-# Summarize the fitted distribution
 summary(illness_fit_ln_duration)
-
+#Plot
 denscomp(illness_fit_ln_duration, main = "Density Plot of Illness Duration (Lognormal)")
 ```
 
 #Generating Plots for Infectious Period
 ```{r}
-# Filter Infectious periods
+#Filter Infectious periods
 Infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period)) & linelist$infectious_period > 0]
 
-# Fit a lognormal distribution
+#Fit distribution
 Infectious_fit_ln_duration <- fitdist(Infectious_duration, "lnorm")
 
-# Summarize the fitted distribution
 summary(Infectious_fit_ln_duration)
 
+#Plot
 denscomp(Infectious_fit_ln_duration, main = "Density Plot of Infectious Period (Lognormal)")
 ```
 
 ```{r}
 merged_data$serial_interval_in_hours
-# Filter Infectious periods
+#Filter Infectious periods
 serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
-# Fit a lognormal distribution
+#Fit distribution
 Serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
-# Summarize the fitted distribution
-summary(Serial_interval_fit_ln_duration)
 
+summary(Serial_interval_fit_ln_duration)
+#Plot
 denscomp(Serial_interval_fit_ln_duration, main = "Density Plot of Serial Interval (Lognormal)")
 ```
 Log Distribution of Natural History Parameters
@@ -510,8 +505,6 @@ text(mean(incubation_duration), 0.01, "Mean", col = "red")
 #Illness Duration
 illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
 illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
-
-
 
 #Plot
 denscomp(illness_fit_ln_duration, main = "Illness Duration (hours)", xlab = "Illness Duration", ylab = "Density")
@@ -582,10 +575,10 @@ legend("topright", legend = c("Incubation", "Illness", "Infectious", "Serial Int
 
 
 
-	#Demographic Information
+##Demographic Information
 
 
-Compare Period Prevalence of Undergraduates and Graduate Year 1 vs those that are Graduate Year 2 and doctorate students
+#Compare Period Prevalence of Undergraduates and Graduate Year 1 vs those that are Graduate Year 2 and #doctorate students
 ```{r}
 #Create new variable to dicotomize level variable
 #Get numerator
@@ -606,7 +599,7 @@ period_prevalance_G1S = 44/64
 period_prevalance_G2D = 37/90
 ```
 
-Compare Period Prevalence of RFF for different PH programs
+#Compare Period Prevalence of RFF for different PH programs
 ```{r}
 table(roster$program)
 
@@ -629,7 +622,7 @@ period_prevalance_gh = 12/29
 period_prevalance_otherprs = 13/21
 ```
 	
-Severity by Demographic Factors
+#Severity by Demographic Factors
 ```{r}
 #Severity by Course
 table(full_data$education)
@@ -641,7 +634,7 @@ table(Severe$program_num)
 
 ```
 
-Population Sizes
+#Population Sizes
 ```{r}
 table(roster$course)
 #EPI_569 = 54, EPI 517 = 95, EPI 569 + EPI 517 = 5
@@ -656,7 +649,7 @@ table(roster$level)
 #full standing = 4, Graduate Year 1 = 63, Graduate Year 2 = 83, Non-Degree Graduate = 3, Senior = 1
 ```
 
-Case Distribution
+#Case Distribution
 ```{r}
 table(full_data$course.y)
 #EPI 569 = 28 cases, EPI 517 = 49 cases, Both = 4
@@ -667,12 +660,12 @@ table(linelist$gender)
 table(Severe$gender)
 #Females = 20 severe cases, Males = 8 severe cases
 ```
-Illness Duration in severe cases
+#Illness Duration in severe cases
 ```{r}
 mean(Severe$illness_duration)
 sd(Severe$illness_duration)
 ```
-Compare infectiousness between symptomatic and asymptomatic cases
+#Compare infectiousness between symptomatic and asymptomatic cases
 ```{r}
 symptomatic <- linelist %>% 
 	filter(symptomatic == 1)
