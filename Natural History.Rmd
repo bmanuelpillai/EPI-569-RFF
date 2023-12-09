@@ -1,0 +1,294 @@
+---
+title: "Natural History"
+output: html_document
+date: "2023-11-24"
+---
+
+***Load packages***
+```{r}
+pacman::p_load(tidyverse, 
+							 ggplot2,
+							 janitor,
+							 lubridate,
+							 dplyr,
+							 fitdistrplus)
+```
+
+### Load data
+```{r}
+raw_data <- readRDS('/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rff_finalcases_clean_2023.rds') %>% janitor::clean_names()
+roster <- readRDS('/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rosters_569_517_clean_2023.rds') %>%  janitor::clean_names()
+```
+
+### Data Cleaning 
+```{r}
+linelist <- raw_data %>% 
+	#rename variables 
+	rename(c('report' = 'reporting_time',
+					 'infector_id' = 'infectedby',
+					 'exposure_date' = 'date_of_exposure',
+					 'exposure_time' = 'time_of_exposure',
+					 'symptomatic' = 'did_you_have_symptoms',
+					 'incubation_period' = 'how_many_hours_after_exposure_did_you_develop_symptoms',
+					 'illness_duration' = 'how_many_hours_after_your_symptom_onset_did_you_feel_better',
+					 'n_contacts' = 'how_many_people_did_you_expose',
+					 'n_infect' = 'how_many_people_did_you_actually_infect',
+					 'contact1_id' = 'case_id_first_exposure',
+					 'contact1_date' = 'date_of_first_exposure',
+					 'contact1_time' = 'time_of_first_exposure',
+					 'contact2_id' = 'case_id_second_exposure',
+					 'contact2_date' = 'date_of_second_exposure',
+					 'contact2_time' = 'time_of_second_exposure',
+					 'contact3_id' = 'case_id_third_exposure',
+					 'contact3_date' = 'date_of_third_exposure',
+					 'contact3_time' = 'time_of_third_exposure',
+					 'contact4_id' = 'case_id_fourth_exposure',
+					 'contact4_date' = 'date_of_fourth_exposure',
+					 'contact4_time' = 'time_of_fourth_exposure',
+					 'contact5_id' = 'case_id_fifth_exposure',
+					 'contact5_date' = 'date_of_fifth_exposure',
+					 'contact5_time' = 'time_of_fifth_exposure',
+					 'exposure0' = 'date_time_exposure',
+					 'exposure1' = 'date_time_first_exposure',
+					 'exposure2' = 'date_time_second_exposure',
+					 'exposure3' = 'date_time_third_exposure',
+					 'exposure4' = 'date_time_fourth_exposure',
+					 'exposure5' = 'date_time_fifth_exposure')) %>% 
+	
+	#recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
+	mutate( gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
+	
+	#recode course variable as numeric (0 = EPI 569, 1 = EPI 517, 2 = both)
+	mutate(course = recode(course, "EPI 569 (Concepts and Methods in ID EPI)" = 0, 
+												 "EPI/GH 517 (Case Studies in ID)" = 1,
+												 "BOTH" = 2)) %>% 
+	
+	#recode symptomatic variable as numeric (0 = No, 1 = Yes)
+	mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1))
+
+```
+
+
+### Create Onset Variable
+```{r}
+#Create new onset variable using date and time of exposure + incubation period 
+linelist <- linelist %>% 
+	mutate(onset = exposure0 + incubation_period) %>% 
+	mutate(onset = date(onset))
+```
+
+### Calculating Mean and SD Incubation Period
+```{r}
+linelist %>%
+	summarise(mean(incubation_period, na.rm = T))
+#23.36
+
+linelist %>% 
+	summarise(sd(incubation_period, na.rm = T))
+#7.38
+```
+
+### Calculating Mean and SD for Ill Duration
+```{r}
+linelist %>%
+	summarise(mean(illness_duration, na.rm = T))
+#25.02
+
+linelist %>%
+	summarise(sd(illness_duration, na.rm = T))
+#9.09
+```
+
+
+Serial Interval
+```{r}
+serial <- raw_data[, c("case_id", "infectedby", "date_of_exposure", "time_of_exposure", "how_many_hours_after_exposure_did_you_develop_symptoms")]
+
+#Covert to Exposure to Date_Time format
+serial$date_time_exposure <- as.POSIXct(paste(serial$date_of_exposure, serial$time_of_exposure), format="%Y-%m-%d %H:%M:%S")
+serial <- serial[, !(names(serial) %in% c("date_of_exposure", "time_of_exposure"))]
+
+#Covert Symptom Onset to Date_Time Format
+serial$date_time_symptom_onset <- serial$date_time_exposure + 
+  as.difftime(serial$how_many_hours_after_exposure_did_you_develop_symptoms, units = "hours")
+
+serial <- serial[, !(names(serial) %in% c("how_many_hours_after_exposure_did_you_develop_symptoms"))]
+
+#Get infector and infected columns
+merged_data <- merge(serial, serial, by.x = "infectedby", by.y = "case_id", suffixes = c("_infected", "_infector"))
+
+#Calculate serial interval in days
+merged_data$serial_interval_in_days <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "days"))
+
+#Calculate serial interval in hours
+merged_data$serial_interval_in_hours <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "hours"))
+
+#Calculate serial interval in minutes
+merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
+
+serial_interval_in_days_average<- mean(merged_data$serial_interval_in_days, na.rm = T)
+
+serial_interval_in_days_sd<- sd(merged_data$serial_interval_in_days, na.rm = T)
+
+serial_interval_in_hours_average<- mean(merged_data$serial_interval_in_hours, na.rm = T)
+
+serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T)
+```
+#Calculating Mean and SD for Latent Period
+```{r}
+serial$latent <- serial$date_time_symptom_onset - serial$date_time_exposure
+mean(serial$latent, na.rm = TRUE)
+#23.26
+sd(serial$latent, na.rm = TRUE)
+#7.38
+```
+
+
+#Generating Plots for Incubation Period
+```{r}
+# Filter incubation periods
+incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
+
+# Fit a lognormal distribution
+incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
+
+# Summarize the fitted distribution
+summary(incubation_fit_ln_duration)
+
+denscomp(incubation_fit_ln_duration)
+```
+#Generating Plots for Illness Duration
+```{r}
+# Filter incubation periods
+illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
+
+# Fit a lognormal distribution
+illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
+
+# Summarize the fitted distribution
+summary(illness_fit_ln_duration)
+
+denscomp(illness_fit_ln_duration)
+```
+
+#Calculating infectious period for each person (assuming exposure is start of infectiousness)
+```{r}
+#Covert to exposure times to Date_Time format
+linelist$exposure_date_time <- as.POSIXct(paste(linelist$exposure_date, linelist$exposure_time), format="%Y-%m-%d %H:%M:%S")
+linelist <- linelist[, !(names(linelist) %in% c("exposure_date", "exposure_time"))]
+
+#Covert to contact times to Date_Time format
+linelist$contact1_date_time <- as.POSIXct(paste(linelist$contact1_date, linelist$contact1_time), format="%Y-%m-%d %H:%M:%S")
+linelist <- linelist[, !(names(linelist) %in% c("contact1_date", "contact1_time"))]
+
+linelist$contact2_date_time <- as.POSIXct(paste(linelist$contact2_date, linelist$contact2_time), format="%Y-%m-%d %H:%M:%S")
+linelist <- linelist[, !(names(linelist) %in% c("contact2_date", "contact2_time"))]
+
+
+linelist$contact3_date_time <- as.POSIXct(paste(linelist$contact3_date, linelist$contact3_time), format="%Y-%m-%d %H:%M:%S")
+linelist <- linelist[, !(names(linelist) %in% c("contact3_date", "contact3_time"))]
+
+
+linelist$contact4_date_time <- as.POSIXct(paste(linelist$contact4_date, linelist$contact4_time), format="%Y-%m-%d %H:%M:%S")
+linelist <- linelist[, !(names(linelist) %in% c("contact4_date", "contact4_time"))]
+
+
+linelist$contact5_date_time <- as.POSIXct(paste(linelist$contact5_date, linelist$contact5_time), format="%Y-%m-%d %H:%M:%S")
+linelist <- linelist[, !(names(linelist) %in% c("contact5_date", "contact5_time"))]
+
+
+#Calculate time between exposure and last contact
+linelist$time_between_exposure_last_contact <- with(linelist, ifelse(!is.na(contact5_date_time), contact5_date_time - exposure_date_time,
+                                                                     ifelse(!is.na(contact4_date_time), contact4_date_time - exposure_date_time,
+                                                                     ifelse(!is.na(contact3_date_time), contact3_date_time - exposure_date_time,
+                                                                     ifelse(!is.na(contact2_date_time), contact2_date_time - exposure_date_time,
+                                                                     ifelse(!is.na(contact1_date_time), contact1_date_time - exposure_date_time, NA))))))
+
+
+#Calculate mean infectious period based on start of exposure and last contact
+mean_time <- linelist %>% 
+  filter(case_id != 6) %>% 
+  summarise(mean = mean(time_between_exposure_last_contact, na.rm = T))
+
+#1463.86
+```
+
+#Calculating infectious period for each person (assuming symptom_onset is start of infectiousness)
+```{r}
+d <- left_join(linelist, serial, by = "case_id")
+
+#Calculate time between symtpom and last contact
+d$time_between_symptoms_last_contact <- with(d, ifelse(!is.na(contact5_date_time), contact5_date_time - date_time_symptom_onset,
+                                                                     ifelse(!is.na(contact4_date_time), contact4_date_time - date_time_symptom_onset,
+                                                                     ifelse(!is.na(contact3_date_time), contact3_date_time - date_time_symptom_onset,
+                                                                     ifelse(!is.na(contact2_date_time), contact2_date_time - date_time_symptom_onset,
+                                                                     ifelse(!is.na(contact1_date_time), contact1_date_time - date_time_symptom_onset, NA))))))
+
+
+#Calculate mean infectious period based on start of exposure and last contact
+mean_time <- d %>% 
+  filter(case_id != 6) %>% 
+  summarise(mean = mean(time_between_symptoms_last_contact, na.rm = T))
+```
+
+#Outlier Detection for Infectious Prior to symptom onset
+```{r}
+d2 <- d[, c("case_id","infectedby","exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5","date_time_symptom_onset")]
+
+d2 <- merge(d2, raw_data[, c("case_id", "how_many_hours_after_your_symptom_onset_did_you_feel_better")], by = "case_id", all.x = TRUE)
+
+d2$date_time_recovery <- d2$date_time_symptom_onset +
+  as.difftime(d2$how_many_hours_after_your_symptom_onset_did_you_feel_better, units = "hours")
+
+
+date_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset")
+
+d2[date_columns] <- lapply(d2[date_columns], function(x) as.POSIXct(x, format = "%Y-%m-%d %H:%M:%S", tz = "UTC"))
+
+#New variable outlier
+d2$outlier <- ifelse(d2$date_time_symptom_onset < do.call(pmin, c(d2[, c("exposure1", "exposure2", "exposure3", "exposure4", "exposure5")], na.rm = TRUE)), 0, 1)
+
+d3 <- d2 %>% 
+	filter(outlier == 1)
+
+outlier_vector <- d3$case_id
+
+print(outlier_vector)
+```
+#Outlier Detection for Infectious Prior after recovery
+```{r}
+#New variable outlier
+d2$outlier2 <- ifelse(d2$date_time_recovery < do.call(pmax, c(d2[, c("exposure1", "exposure2", "exposure3", "exposure4", "exposure5")], na.rm = TRUE)), 0, 1)
+
+d4 <- d2 %>% 
+	filter(outlier2 == 1)
+
+outlier_vector2 <- d4$case_id
+
+print(outlier_vector2)
+```
+
+Infectious Period(symptom onset to symptom recovery)
+```{r}
+#Convert exposure to Date_Time Format
+infectious <- raw_data %>% 
+  mutate(date_time_exposure = as.POSIXct(paste(date_of_exposure, time_of_exposure), format="%Y-%m-%d %H:%M:%S"))
+
+infectious <- infectious[, !(names(infectious) %in% c("date_of_exposure", "time_of_exposure"))]
+	
+#Calculate Symptom Onset Date_Time
+#Covert Symptom Onset to Date_Time Format
+infectious$date_time_symptom_onset <- infectious$date_time_exposure + 
+  as.difftime(infectious$how_many_hours_after_exposure_did_you_develop_symptoms, units = "hours")
+
+infectious <- infectious[, !(names(infectious) %in% c("how_many_hours_after_exposure_did_you_develop_symptoms"))]
+#Calculate Recovery Date_time
+infectious$date_time_recovery <- infectious$date_time_symptom_onset + 
+  as.difftime(infectious$how_many_hours_after_your_symptom_onset_did_you_feel_better, units = "hours")
+
+infectious <- infectious[, !(names(infectious) %in% c("how_many_hours_after_your_symptom_onset_did_you_feel_better"))]
+
+infectious$infectious_period <- infectious$date_time_recovery -infectious$date_time_symptom_onset
+	
+```
+need to adapt this so that we include people that are infecting prior to symptom onset and people that infecting after recovery date.
