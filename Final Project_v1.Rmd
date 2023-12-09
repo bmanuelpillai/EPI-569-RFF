@@ -1,32 +1,40 @@
 ---
 title: "EPI 569 Final Project"
-author: "Meghna Ray"
+author: "Meghna Ray, Charlotte Doran, and Bevin Manuelpillai"
 date: "`r Sys.Date()`"
 output: html_document
+execute:
+	cache: true
 ---
 
-### R setup 
+# Setup
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-```
 
-***Load packages***
-```{r}
+#Load packages
 pacman::p_load(tidyverse, 
                ggplot2,
                janitor,
                lubridate,
-               dplyr)
+               dplyr,
+							 splitstackshape,
+							 earlyR,
+							 incidence,
+							 fitdistrplus,
+							 EpiEstim,
+							 ggpubr)
 ```
 
 ### Load data
+
 ```{r}
-raw_data <- readRDS('rff_finalcases_clean_2023.rds') %>% janitor::clean_names()
-roster <- readRDS('rosters_569_517_clean_2023.rds') %>%  janitor::clean_names()
+raw_data <- readRDS('rff_finalcases_clean_2023_2.rds') %>% janitor::clean_names()
+roster <- readRDS('rosters_569_517_clean_2023_2.rds') %>%  janitor::clean_names()
 ```
 
-### Data Cleaning 
+### Data Cleaning
+
 ```{r}
 linelist <- raw_data %>% 
   #rename variables 
@@ -59,10 +67,11 @@ linelist <- raw_data %>%
            'exposure2' = 'date_time_second_exposure',
            'exposure3' = 'date_time_third_exposure',
            'exposure4' = 'date_time_fourth_exposure',
-           'exposure5' = 'date_time_fifth_exposure')) %>% 
+           'exposure5' = 'date_time_fifth_exposure',
+  				 'severe_date' = 'date_you_became_severe')) %>% 
   
   #recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
-  mutate( gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
+  mutate(gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
   
   #recode course variable as numeric (0 = EPI 569, 1 = EPI 517, 2 = both)
   mutate(course = recode(course, "EPI 569 (Concepts and Methods in ID EPI)" = 0, 
@@ -70,32 +79,58 @@ linelist <- raw_data %>%
                          "BOTH" = 2)) %>% 
   
   #recode symptomatic variable as numeric (0 = No, 1 = Yes)
-  mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1))
+  mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1)) %>% 
+	
+	#recode severe variable as numeric (0 = No, 1 = Yes)
+	mutate(severe = recode(severe, "No" = 0, "Yes" = 1))
   
 ```
 
-
-### Plot Epi Curve
-
-***Onset variable***
+### Important values
 ```{r}
-#Create new onset variable using date and time of exposure + incubation period 
-linelist <- linelist %>% 
-  mutate(onset = exposure0 + incubation_period) %>% 
-  mutate(onset = date(onset))
+total_pop <- nrow(roster)
+palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467")
 ```
 
-***Plot epi curve***
+
+# Plot Epi Curve
+
+## Onset and recovery
+
+```{r}
+#Create new onset variable using date and time of exposure + incubation period 
+med_incubation <- median(linelist$incubation_period, na.rm = TRUE)
+med_duration <- median(linelist$illness_duration, na.rm = TRUE)
+asymp_duration <- med_incubation + med_duration
+
+#Create onset variable
+linelist <- linelist %>% 
+	mutate(onset = case_when(symptomatic == 0 ~ NA, #no symptom onset for asymptomatic cases
+													 symptomatic == 1 ~ exposure0 + hours(incubation_period), #symptoms start after incubation period
+													 is.na(symptomatic) ~ NA, #keep missing and NA's NA
+													 TRUE ~ NA)) %>% 
+  mutate(onset = date(onset))
+
+#Create recovered variable
+linelist <- linelist %>% 
+	mutate(recovered = case_when((symptomatic == 0 | is.na(symptomatic)) ~ exposure0 + hours(asymp_duration), #imputed infectious periods for asymptomatic or missing
+															 (symptomatic == 1 & severe == 1) ~ pmax(onset + hours(illness_duration), severe_date), #for severe cases, recovery is the later of illness duration end or severe date
+															 (symptomatic == 1 & severe == 0) ~ onset + hours(illness_duration),
+															 TRUE ~ NA)) %>% 
+	mutate(recovered = date(recovered))
+```
+
+## Epi curve by onset date
+
 ```{r}
 #Create data frame for epi curve with onset and incidence
-epicurve <- as.data.frame(linelist %>% 
+epicurve1 <- as.data.frame(linelist %>% 
                             group_by(onset) %>%
                             summarize(incidence=n()))
-
 #Plot epi curve 
-plot1 <- epicurve %>% 
+plot1 <- epicurve1 %>% 
   ggplot(aes(x = onset, y = incidence, labs = FALSE)) + 
-  geom_bar(stat="identity", fill="gray45") +
+  geom_bar(stat="identity", fill=palette[4]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous(breaks = seq(0, 15, by = 2)) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
@@ -105,15 +140,36 @@ plot1 <- epicurve %>%
 plot1
 ```
 
-***Plot log cases***
+## Epi curve by exposure date
+
+```{r}
+epicurve2 <- as.data.frame(linelist %>% 
+                            group_by(exposure_date) %>%
+                            summarize(incidence=n()))
+
+#Plot epi curve 
+plot4 <- epicurve2 %>% 
+  ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
+  geom_bar(stat="identity", fill=palette[4]) +
+  scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
+  scale_y_continuous(breaks = seq(0, 15, by = 2)) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
+  labs(x = "Exposure Date",
+       y = "Number of Cases",
+       title = "Epi Curve for Rollins Fall Fever")
+plot4
+```
+
+## Log cases
+
 ```{r, include = TRUE, echo = T}
-epicurve <- epicurve %>% 
+epicurve3 <- epicurve2 %>% 
   mutate(log_cases = log(incidence))
 
 #Plot log cases
-plot2 <- epicurve %>% 
-  ggplot(aes(x = onset, y = log_cases, labs = FALSE)) + 
-  geom_bar(stat="identity", fill="gray45") +
+plot2 <- epicurve3 %>% 
+  ggplot(aes(x = exposure_date, y = log_cases, labs = FALSE)) + 
+  geom_bar(stat="identity", fill=palette[4]) +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
   scale_y_continuous() +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
@@ -123,15 +179,9 @@ plot2 <- epicurve %>%
 plot2
 ```
 
-***Recovered variable***
-```{r}
-#Create new onset variable using date and time of exposure + incubation period 
-linelist <- linelist %>% 
-  mutate(recovered = onset + illness_duration)
-#[CD] Because we have a lot of missing illness_duration, I propose that we impute this variable as the median illness duration (26 hours)
-```
-
+## Susceptible, infected, recovered by day
 ***Calculate number of recovered by day***
+
 ```{r}
 recovered <- linelist %>% 
   group_by(recovered) %>% 
@@ -140,111 +190,304 @@ recovered <- linelist %>%
 ```
 
 ***Calculate number of infected by day***
+
 ```{r}
-infected <- linelist %>% 
-  group_by(onset) %>% 
-  summarize(n_onset = n()) %>% 
+infected <- linelist %>%
+  group_by(exposure_date) %>%
+  summarize(n_exposed = n()) %>%
   na.omit()
 
-#option 2
-dateseq <- seq(from = as.Date(min(linelist$onset, na.rm = TRUE)),
+#Create a sequence of dates from the onset to the end of the outbreak
+dateseq <- seq(from = as.Date(min(linelist$exposure_date, na.rm = TRUE)),
 								 to = as.Date(max(linelist$recovered, na.rm = TRUE)),
 								 by = "1 day")
 
-#infectedseq <- map(dateseq, ~ sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
-
-#infected2$date <- dateseq
-#infected2$n_infected <- as.numeric(infectedseq)
-
-#I tried this instead and got infected2 to work (Bevin)
-infectedseq <- map(dateseq, ~sum(.x >= linelist$onset & .x < linelist$recovered, na.rm = TRUE))
+#For each date, calculate the number of infected people by determining if that date is between their onset date and their recovery date
+infectedseq <- map(dateseq, ~sum(.x >= linelist$exposure_date & .x < linelist$recovered, na.rm = TRUE))
 infected2 <- data.frame(date = dateseq, n_infected = as.numeric(infectedseq))
 ```
 
 ***Calculate number of susceptible by day***
+
 ```{r}
-
 #Join infected and recovered datasets
-epicurve2 <- infected2 %>% 
-  full_join(recovered, by =c('date' = 'recovered')) %>% 
-	full_join(infected, by = c("date" = "onset"))
-
-#Set na values to zero 
-epicurve2 <- epicurve2 %>% 
+epicurve4 <- infected2 %>% 
+  full_join(recovered, by = c("date" = "recovered")) %>% 
+	full_join(infected, by = c("date" = "exposure_date")) %>% 
+	#Set na values to zero 
   mutate(n_infected = ifelse(is.na(n_infected), 0, n_infected)) %>% 
   mutate(n_recovered = ifelse(is.na(n_recovered), 0, n_recovered)) %>% 
-	mutate(n_onset = ifelse(is.na(n_onset), 0, n_onset))
-
-#Create variable for cumulative recoveries and infected
-epicurve2 <- epicurve2 %>% 
+	mutate(n_exposed = ifelse(is.na(n_exposed), 0, n_exposed)) %>% 
+	#Create variable for cumulative recoveries and infected
   mutate(total_recovered = cumsum(n_recovered)) %>% 
-  mutate(total_infected = cumsum(n_onset))
+  mutate(total_infected = cumsum(n_exposed))
 
-#Calculate number of people not susceptible and susceptible 
-total_pop <- nrow(roster)
-epicurve2 <- epicurve2 %>% 
-  mutate(susceptible = total_pop - total_infected)
+#Calculate number of people susceptible 
+epicurve4 <- epicurve4 %>% 
+  mutate(n_susceptible = total_pop - total_infected) %>% 
+	#Check that the total population size is stable
+	mutate(total = n_infected + total_recovered + n_susceptible)
 ```
 
 ***Plot susceptible, infected, and recovered by day***
+
 ```{r}
-plot2 <- ggplot(epicurve2, aes(x = date)) +
-  geom_line(aes(y = susceptible, color = "Susceptible")) +
-  geom_line(aes(y = n_infected, color = "Infected")) +
-  geom_line(aes(y = total_recovered, color = "Recovered")) +
+plot3 <- ggplot(epicurve4, aes(x = date)) +
+  geom_line(aes(y = n_susceptible, color = "Susceptible"), linewidth = 1) +
+  geom_line(aes(y = n_infected, color = "Infected"), linewidth = 1) +
+  geom_line(aes(y = total_recovered, color = "Recovered"), linewidth = 1) +
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
   labs(x = "Date",
        y = "Number of Cases",
        title = "Epi Curve for Rollins Fall Fever") +
   scale_color_manual(name='Class',
                      breaks=c('Susceptible', 'Infected', 'Recovered'),
-                     values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
+                     values=c('Susceptible'=palette[1], 'Infected'=palette[2], 'Recovered'=palette[3])) +
+	scale_x_date(breaks = "2 days",
+							 date_labels = "%b %d") +
   theme(legend.title = element_text(size = 15),
-        legend.text = element_text(size = 8))
-
-plot2
-```
-
-***Wanted to see how a percent Epi Curve would look. I havent seen the data presented this way in class though***
-```{r}
-epicurve3 <- epicurve2 %>% 
-	mutate(susceptible2 = susceptible/153) %>% 
-	mutate(n_infected2 = n_infected/153) %>% 
-	mutate(total_recovered2 = total_recovered/153)
-
-plot3 <- ggplot(epicurve3, aes(x = date)) +
-  geom_line(aes(y = susceptible2, color = "Susceptible")) +
-  geom_line(aes(y = n_infected2, color = "Infected")) +
-  geom_line(aes(y = total_recovered2, color = "Recovered")) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Date",
-       y = "Proportion of Total Population",
-       title = "Epi Curve for Rollins Fall Fever") +
-  scale_color_manual(name='Class',
-                     breaks=c('Susceptible', 'Infected', 'Recovered'),
-                     values=c('Susceptible'='red', 'Infected'='blue', 'Recovered'='green')) +
-  theme(legend.title = element_text(size = 15),
-        legend.text = element_text(size = 8))
-
+        legend.text = element_text(size = 8),
+  			panel.grid.minor = element_blank())
 plot3
 ```
 
-**Plot epi curve using exposure date rather than onset date**
-```{r}
-epicurve4 <- as.data.frame(linelist %>% 
-                            group_by(exposure_date) %>%
-                            summarize(incidence=n()))
+# Natural History Parameters
 
-#Plot epi curve 
-plot4 <- epicurve4 %>% 
-  ggplot(aes(x = exposure_date, y = incidence, labs = FALSE)) + 
-  geom_bar(stat="identity", fill="gray45") +
+## Incubation period
+```{r}
+mean_incubation <- linelist %>%
+	summarise(mean(incubation_period, na.rm = T))
+#23.36
+
+sd_incubation <- linelist %>% 
+	summarise(sd(incubation_period, na.rm = T))
+#7.38
+```
+
+## Illness duration
+
+```{r}
+mean_duration <- linelist %>%
+	summarise(mean(illness_duration, na.rm = T))
+#25.02
+
+ds_duration <- linelist %>%
+	summarise(sd(illness_duration, na.rm = T))
+#9.09
+```
+
+## Serial interval
+
+```{r}
+#Select only the columns of interest
+serial <- raw_data[, c("case_id", "infectedby", "date_of_exposure", "time_of_exposure", "how_many_hours_after_exposure_did_you_develop_symptoms")]
+
+#Covert to Exposure to Date_Time format
+serial$date_time_exposure <- as.POSIXct(paste(serial$date_of_exposure, serial$time_of_exposure), format="%Y-%m-%d %H:%M:%S")
+serial <- serial[, !(names(serial) %in% c("date_of_exposure", "time_of_exposure"))]
+
+#Covert Symptom Onset to Date_Time Format
+serial$date_time_symptom_onset <- serial$date_time_exposure + 
+  as.difftime(serial$how_many_hours_after_exposure_did_you_develop_symptoms, units = "hours")
+
+#Remove incubation period column
+serial <- serial[, !(names(serial) %in% c("how_many_hours_after_exposure_did_you_develop_symptoms"))]
+
+#Get infector and infected columns
+merged_data <- merge(serial, serial, by.x = "infectedby", by.y = "case_id", suffixes = c("_infected", "_infector"))
+
+#Calculate serial interval in days
+merged_data$serial_interval_in_days <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "days"))
+
+#Calculate serial interval in hours
+merged_data$serial_interval_in_hours <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "hours"))
+
+#Calculate serial interval in minutes
+merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
+
+serial_interval_in_days_average<- mean(merged_data$serial_interval_in_days, na.rm = T)
+
+serial_interval_in_days_sd<- sd(merged_data$serial_interval_in_days, na.rm = T)
+
+serial_interval_in_hours_average<- mean(merged_data$serial_interval_in_hours, na.rm = T)
+
+serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T)
+```
+
+## Latent Period
+```{r}
+serial$latent <- serial$date_time_symptom_onset - serial$date_time_exposure
+mean_latent <- mean(serial$latent, na.rm = TRUE)
+#23.36
+ds_latent <- sd(serial$latent, na.rm = TRUE)
+#7.38
+```
+
+
+# Reproduction Numbers
+```{r}
+start_day <- date("2023-10-11")
+end_day <- date("2023-10-20")
+```
+
+We used the initial growth rate method to calculate $R_0$ from the plot of the log cases based on exposure date. The first case on RFF was observed on `r start_day`. Using the plot of log cases, the log-linear growth period ends on `r end_day`.
+$I(t) \approx I(0) e^{rt}$
+
+```{r}
+linear_growth <- epicurve3 %>% 
+	filter(exposure_date %in% c(start_day, end_day))
+plot2 +
+	geom_line(data = linear_growth,
+						mapping = aes(x = exposure_date, y = log_cases),
+						color = palette[2],
+						linewidth = 1.5)
+```
+
+```{r}
+r0_df <- epicurve3 %>%
+	filter(exposure_date >= start_day, exposure_date <= end_day) %>% 
+	splitstackshape::expandRows("incidence", drop = FALSE) %>% 
+	dplyr::select(exposure_date) %>% 
+	pull(exposure_date)
+
+i <- incidence(r0_df)
+mu <- serial_interval_in_days_average #replace with mean generation time
+sigma <- serial_interval_in_days_sd #replace with standard deviation of generation time
+res <- get_R(i, si_mean = mu, si_sd = sigma)
+R_val <- sample_R(res, 1000)
+r0 <- mean(R_val)
+```
+
+Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, is `r round(r0, 1)`.
+
+We can compare this value to the $R_0$ calculated based purely on the number of people that each individual exposed.
+
+```{r}
+r0_2 <- mean(linelist$n_contacts)
+```
+
+# Time-varying Reproductive Number (Rt)
+
+```{r}
+#Convert data to a format that can be used in the EpiEstim wallinga_teunis function 
+## Note: to calculate an Rt estimate for day 1 of the outbreak, we must start our epi curve 2 days prior the first symptom onset date
+
+epicurve5 <- epicurve2 %>%
+	arrange(exposure_date) %>% 
+	rename(date = exposure_date, I = incidence) %>% 
+	dplyr::select(date, I)
+
+all.dates <- as.data.frame(seq(as.Date("2023-10-09"), by = "day", length.out = 23)) 
+names(all.dates) <- "date"
+
+epicurve.epiestim <- merge(x=epicurve5, y=all.dates, by="date", all="TRUE")
+epicurve.epiestim <- epicurve.epiestim %>% mutate(I = ifelse(is.na(I), 0, I)) 
+
+#Estimate Rt, along with 95% confidence intervals for Rt estimates
+
+mean_si_days <- 41.12/24   
+std_si_days <- 47.15/24
+
+estimates <- wallinga_teunis(epicurve.epiestim$I, 
+                             method="parametric_si",
+                             config = list(t_start = seq(1, 23), 
+                                           t_end = seq(1, 23),
+                                           mean_si = mean_si_days, 
+                                           std_si = std_si_days, 
+                                           n_sim = 1000))
+
+#save estimates R to a new dataframe 
+#set zeros for where estimates are missing 
+
+estimates_R <- as.data.frame(estimates$R)
+	
+	
+estimates_R <- as.data.frame(estimates$R) %>%
+	rename(mean = `Mean(R)`,
+				 std = `Std(R)`,
+				 Q25 = `Quantile.0.025(R)`,
+				 Q975 = `Quantile.0.975(R)`) %>% 
+	rbind(data.frame(t_start = c(6, 7, 21),
+									 t_end = c(6, 7, 21),
+									 mean = 0,
+									 std = 0,
+									 Q25 = 0,
+									 Q975 = 0)) %>%
+	arrange(t_start)
+
+#Examine the serial interval distribution
+plot(estimates$si_distr, xlab="Serial Interval (Days)", ylab="Proportion")
+
+```
+
+Plot the R(t) estimates and 95% CIs over the epi curve
+
+```{r}
+plot2.data <- cbind(epicurve.epiestim[-(1:4),], estimates_R$mean,
+                    estimates_R$Q25, estimates_R$Q975)
+names(plot2.data) <- c("dates", "I", "R", "lowerCI", "upperCI")
+
+```
+
+```{r}
+plot2 <- ggplot(data=plot2.data, aes(x=dates, y=I, labs=FALSE)) + 
+  geom_bar(stat="identity", fill="#636467") +
   scale_x_date(date_breaks = "2 days", date_labels = "%m/%d") +
-  scale_y_continuous(breaks = seq(0, 15, by = 2)) +
-  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1)) +
-  labs(x = "Exposure Date",
-       y = "Number of Cases",
-       title = "Epi Curve for Rollins Fall Fever")
-plot4
+  scale_y_continuous(breaks = seq(0,20, by = 2)) +
+  theme(axis.text.x = element_text(angle = 45)) +
+  labs(x = "Exposure Date", 
+       y = "Number of Cases (bars) and Rt (line;95% CI)",
+       title = "Epi Curve for RFF Outbreak (Mean SI=1.7)") +
+  geom_hline(aes(yintercept=1), colour="#E28571", linetype="dashed", size=0.5) +
+  geom_errorbar(data=plot2.data, aes(ymax=upperCI, ymin=lowerCI, width=0.6),stat="identity", size=0.8, show.legend=FALSE) +
+  geom_line(data=plot2.data[!is.na(plot2.data$R),],aes(x=dates, y=R), color='#66B4BE', size=0.5) +
+  geom_point(data = plot2.data, aes(x=dates, y=R), size=1.2, show.legend=FALSE) 
+plot2
+```
+
+# Calculate critical vaccination thresholds
+
+$P_c = (1 - 1/R_0) / VE$ 
+
+$HIT = (1 - 1/R_0)$ 
+
+$P_c = HIT / VE$ 
+
+$R_0 = 2.41$ 
+
+```{r}
+
+R0 <- 2.41 
+HIT <- 1 - (1/R0)
+HIT
+
+#VE = 100%
+Pc_100 <- (HIT/1) *100
+Pc_100
+
+#VE = 90% 
+Pc_90 <- (HIT/0.9) *100
+Pc_90
+
+#VE = 80% 
+Pc_80 <- (HIT/0.8) *100
+Pc_80
+
+#VE = 70%
+Pc_70 <- (HIT/0.7) *100
+Pc_70
+
+#VE = 60%
+Pc_60 <- (HIT/0.6) *100
+Pc_60
+
+#VE = 50%
+Pc_50 <- (HIT/0.5) *100
+Pc_50
+
+#VE = 50%
+Pc_40 <- (HIT/0.4) *100
+Pc_40
+
 ```
 
