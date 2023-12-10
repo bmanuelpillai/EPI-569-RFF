@@ -330,6 +330,15 @@ linelist$date_time_symptom_onset <- linelist$exposure0 +
 linelist$date_time_recovery <- linelist$date_time_symptom_onset + 
   as.difftime(linelist$illness_duration, units = "hours")
 
+#Convert to unambiguous date_time format
+# List of variables to convert
+date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset", "date_time_recovery", "severe_date")
+
+#Loop through the list and convert each column
+for (col_name in date_time_columns) {
+  linelist[[col_name]] <- as.POSIXct(linelist[[col_name]], format = "%Y-%m-%d %H:%M:%S")
+}
+
 #Calculate start of infectiousness
 linelist <- linelist %>% 
   rowwise() %>% 
@@ -337,11 +346,12 @@ linelist <- linelist %>%
 
 #Calculated end of infectiousness
 linelist <- linelist %>% 
-	rowwise() %>% 
-	mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5, date_time_recovery, severe_date, na.rm = TRUE))
+  rowwise() %>% 
+  mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5, date_time_recovery, severe_date, na.rm = TRUE))
 
 #Calculate infectious period
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
+
 ```
 
 #Latent Period
@@ -475,9 +485,9 @@ denscomp(Infectious_fit_ln_duration, main = "Density Plot of Infectious Period (
 ```
 
 ```{r}
-merged_data$serial_interval_in_hours
+merged_data$serial_interval_in_hours2
 #Filter Infectious periods
-serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
+serial_interval_in_hours <- merged_data$serial_interval_in_hours2[!(is.na(merged_data$serial_interval_in_hours2)) & merged_data$serial_interval_in_hours2 > 0]
 #Fit distribution
 Serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
@@ -525,7 +535,7 @@ abline(v = mean(infectious_duration), col = "red", lty = 2)
 text(mean(infectious_duration), 0.01, "Mean", col = "red")
 
 #Serial Interval
-serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
+serial_interval_in_hours <- merged_data$serial_interval_in_hours2[!(is.na(merged_data$serial_interval_in_hours2)) & merged_data$serial_interval_in_hours2 > 0]
 serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
 #Plot
@@ -550,7 +560,7 @@ infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_pe
 infectious_fit_ln_duration <- fitdist(infectious_duration, "lnorm")
 
 #Serial Interval
-serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
+serial_interval_in_hours <- merged_data$serial_interval_in_hours2[!(is.na(merged_data$serial_interval_in_hours2)) & merged_data$serial_interval_in_hours2 > 0]
 serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
 #X-axis setting
@@ -680,8 +690,6 @@ sd(symptomatic$n_contacts)
 mean(asymptomatic$n_contacts)
 sd(asymptomatic$n_contacts)
 ```
-
-
 
 
 # Reproduction Numbers
