@@ -1,0 +1,218 @@
+---
+title: "Demographic Questions"
+output: html_document
+date: "2023-11-28"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+***Load packages***
+```{r}
+pacman::p_load(tidyverse, 
+							 ggplot2,
+							 janitor,
+							 lubridate,
+							 dplyr,
+							 fitdistrplus)
+```
+
+### Load data
+```{r}
+raw_data <- readRDS('/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rff_finalcases_clean_2023.rds') %>% janitor::clean_names()
+roster <- readRDS('/Users/bevinmanuelpillai/Desktop/EPI 569/RFF/rosters_569_517_clean_2023.rds') %>%  janitor::clean_names()
+```
+
+### Data Cleaning 
+```{r}
+linelist <- raw_data %>% 
+	#rename variables 
+	rename(c('report' = 'reporting_time',
+					 'infector_id' = 'infectedby',
+					 'exposure_date' = 'date_of_exposure',
+					 'exposure_time' = 'time_of_exposure',
+					 'symptomatic' = 'did_you_have_symptoms',
+					 'incubation_period' = 'how_many_hours_after_exposure_did_you_develop_symptoms',
+					 'illness_duration' = 'how_many_hours_after_your_symptom_onset_did_you_feel_better',
+					 'n_contacts' = 'how_many_people_did_you_expose',
+					 'n_infect' = 'how_many_people_did_you_actually_infect',
+					 'contact1_id' = 'case_id_first_exposure',
+					 'contact1_date' = 'date_of_first_exposure',
+					 'contact1_time' = 'time_of_first_exposure',
+					 'contact2_id' = 'case_id_second_exposure',
+					 'contact2_date' = 'date_of_second_exposure',
+					 'contact2_time' = 'time_of_second_exposure',
+					 'contact3_id' = 'case_id_third_exposure',
+					 'contact3_date' = 'date_of_third_exposure',
+					 'contact3_time' = 'time_of_third_exposure',
+					 'contact4_id' = 'case_id_fourth_exposure',
+					 'contact4_date' = 'date_of_fourth_exposure',
+					 'contact4_time' = 'time_of_fourth_exposure',
+					 'contact5_id' = 'case_id_fifth_exposure',
+					 'contact5_date' = 'date_of_fifth_exposure',
+					 'contact5_time' = 'time_of_fifth_exposure',
+					 'exposure0' = 'date_time_exposure',
+					 'exposure1' = 'date_time_first_exposure',
+					 'exposure2' = 'date_time_second_exposure',
+					 'exposure3' = 'date_time_third_exposure',
+					 'exposure4' = 'date_time_fourth_exposure',
+					 'exposure5' = 'date_time_fifth_exposure')) %>% 
+	
+	#recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
+	mutate( gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
+	
+	#recode course variable as numeric (0 = EPI 569, 1 = EPI 517, 2 = both)
+	mutate(course = recode(course, 
+                       "EPI 569 (Concepts and Methods in ID EPI)" = 0, 
+                       "EPI/GH 517 (Case Studies in ID)" = 1,
+                       .default = 2)) %>%
+
+	
+	#recode symptomatic variable as numeric (0 = No, 1 = Yes)
+	mutate(symptomatic = recode(symptomatic, "No" = 0, "Yes" = 1)) %>% 
+
+	#recode severe variable as numeric (0= No, 1 = Yes)
+
+	mutate(severe = recode(severe, "No" = 0, "Yes" =1))
+```
+
+Merge roster and linelist
+```{r}
+full_data <- left_join(linelist, roster, by = "case_id")
+```
+
+Subset to Severe and Non-severe RFF
+```{r}
+Severe <- linelist %>% 
+	filter(severe == 1)
+
+Non_Severe <- linelist %>% 
+	filter(severe == 0)
+```
+Severity by Demographic Factors
+```{r}
+#Severity by Gender
+table(linelist$severe, linelist$gender)
+
+#Severity by Sympomatic vs. asympomatic
+table(linelist$severe, linelist$symptomatic)
+
+#Severity by Course
+table(linelist$severe, linelist$course)
+
+
+```
+Population Sizes
+```{r}
+table(roster$course)
+#EPI_569 = 54, EPI 517 = 95, EPI 569 + EPI 517 = 5
+
+table(roster$degree)
+#Doctor of Philosphy = 4, Liberal Arts & Sciences = 1, Master of Public Health = 136, Master of Science Public Health = 10, Non-Degree Public Health = 3
+
+table(roster$program)
+#Behavioral Sciences = 3, Biostatistics = 1, Environmental Health + Epidemiology = 4, Environmental Health = 3, Epidemiology = 75, Global Environmental Health = 6, Global Epidemiology = 29, Global Health = 29, Human Health BA = 1, Special Standing Student = 3.
+
+table(roster$level)
+#full standing = 4, Graduate Year 1 = 63, Graduate Year 2 = 83, Non-Degree Graduate = 3, Senior = 1
+```
+Case Distribution
+```{r}
+table(full_data$course.y)
+#EPI 569 = 28 cases, EPI 517 = 49 cases, Both = 4
+
+table(linelist$gender)
+#Female = 49 cases, Male = 17 cases, Non-Binary = 2
+
+table(Severe$gender)
+#Females = 20 severe cases, Males = 8 severe cases
+```
+Illness Duration in severe cases
+```{r}
+mean(Severe$illness_duration)
+sd(Severe$illness_duration)
+
+```
+
+Illness Duration in non_severe cases
+```{r}
+mean(Non_Severe$illness_duration)
+sd(Non_Severe$illness_duration)
+```
+Compare infectiousness of symptomatic vs asymptomatic cases
+```{r}
+symptomatic <- linelist %>% 
+	filter(symptomatic == 1)
+
+asymptomatic <- linelist %>% 
+	filter(symptomatic == 0)
+
+#presenting both total number infected and infected vs number of contacts
+#Symptomatic average number of infected
+symptomatic %>% 
+	summarize(mean(n_infect)) 
+
+#Symptomatic ratio of infected to contacts
+symptomatic %>% 
+  filter(!is.na(n_infect) & !is.na(n_contacts) & n_contacts != 0) %>%
+  mutate(infectiousness = n_infect/n_contacts) %>%
+  summarize(mean(infectiousness, na.rm = TRUE))
+
+#asymptomatic average number of infected
+asymptomatic %>% 
+	summarize(mean(n_infect))
+
+#Asymptomatic ratio of infected to contacts
+asymptomatic %>% 
+  filter(!is.na(n_infect) & !is.na(n_contacts) & n_contacts != 0) %>%
+  mutate(infectiousness = n_infect/n_contacts) %>%
+  summarize(mean(infectiousness, na.rm = TRUE))
+```
+Compare Period Prevalence of Undergraduates and Graduate Year 1 vs those that are Graduate Year 2 and doctorate students
+```{r}
+#Create new variable to dicotomize level variable
+#Get numerator
+full_data <- full_data %>% 
+	mutate(education = ifelse(level %in% c("Graduate Year 1", "Senior"),0,1))
+
+table(full_data$education)
+
+# 44 = 0 and 37 = 1
+#Get Denominator
+roster <- roster %>% 
+	mutate(education = ifelse(level %in% c("Graduate Year 1", "Senior"),0,1))
+
+table(roster$education)
+# 64 = 0 and 90 = 1
+
+period_prevalance_G1S = 44/64
+period_prevalance_G2D = 37/90
+```
+
+Compare Period Prevalence of RFF for different PH programs
+```{r}
+table(roster$program)
+
+roster <- roster %>% 
+  mutate(program_num = ifelse(program == "Epidemiology", 0,
+                              ifelse(program == "Global Epidemiology", 1, 
+                                     ifelse(program == "Global Health", 2, 3))))
+
+table(roster$program_num)
+
+full_data <- full_data %>% 
+	mutate(program_num = ifelse(program == "Epidemiology", 0,
+                              ifelse(program == "Global Epidemiology", 1, 
+                                     ifelse(program == "Global Health", 2, 3))))
+table(full_data$program_num)
+
+period_prevalance_epi = 38/75
+period_prevalance_glepi = 18/29
+period_prevalance_gh = 12/29
+period_prevalance_otherprs = 13/21
+```
+
+
+
+
