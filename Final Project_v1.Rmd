@@ -113,11 +113,11 @@ linelist <- linelist %>%
 
 #Create recovered variable
 linelist <- linelist %>% 
-	mutate(recovered = case_when((symptomatic == 0 | is.na(symptomatic)) ~ exposure0 + hours(asymp_duration), #imputed infectious periods for asymptomatic or missing
+	mutate(recovered2 = case_when((symptomatic == 0 | is.na(symptomatic)) ~ exposure0 + hours(asymp_duration), #imputed infectious periods for asymptomatic or missing
 															 (symptomatic == 1 & severe == 1) ~ pmax(onset + hours(illness_duration), severe_date), #for severe cases, recovery is the later of illness duration end or severe date
 															 (symptomatic == 1 & severe == 0) ~ onset + hours(illness_duration),
 															 TRUE ~ NA)) %>% 
-	mutate(recovered = date(recovered))
+	mutate(recovered = date(recovered2))
 ```
 
 ## Epi curve by onset date
@@ -347,7 +347,7 @@ linelist <- linelist %>%
 #Calculated end of infectiousness
 linelist <- linelist %>% 
   rowwise() %>% 
-  mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5, date_time_recovery, severe_date, na.rm = TRUE))
+  mutate(infectiousness_end = pmax(recovered2, severe_date, na.rm = TRUE))
 
 #Calculate infectious period
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
@@ -359,7 +359,7 @@ linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, l
 linelist$latent_period <- as.numeric(difftime(linelist$infectiousness_start, linelist$exposure0, units = "hours"))
 ```
 
-#Mean and SD for Infectious Period Stratified by symptom status and
+#Mean and SD for Infectious Period Stratified by symptom status
 ```{r}
 # Infectious Period for symptomatic
 symptomatic <- linelist %>% 
@@ -372,6 +372,8 @@ asymptomatic <- linelist %>%
   filter(symptomatic == 0)
 mean(asymptomatic$infectious_period, na.rm = TRUE)
 sd(asymptomatic$infectious_period, na.rm = TRUE)
+
+mean
 ```
 
 #Natural History Stratified by Severity
@@ -411,28 +413,6 @@ print(serial_interval_in_hours_sd)
 #Calculate serial interval in minutes
 merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
 ```
-
-#Serial Interval (By Infectiousness End Date)
-```{r}
-#Get infector and infected columns
-merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id", suffixes = c("_infected", "_infector"))
-
-#Calculate serial interval in days
-merged_data$serial_interval_in_days2 <- as.numeric(difftime(merged_data$infectiousness_end_infected, merged_data$infectiousness_end_infector, units = "days"))
-
-serial_interval_in_days_average2<- mean(merged_data$serial_interval_in_days2, na.rm = T)
-serial_interval_in_days_sd2<- sd(merged_data$serial_interval_in_days2, na.rm = T)
-
-#Calculate serial interval in hours
-merged_data$serial_interval_in_hours2 <- as.numeric(difftime(merged_data$infectiousness_end_infected, merged_data$infectiousness_end_infector, units = "hours"))
-
-serial_interval_in_hours_average2<- mean(merged_data$serial_interval_in_hours2, na.rm = T)
-serial_interval_in_hours_sd2<- sd(merged_data$serial_interval_in_hours2, na.rm = T)
-
-print(serial_interval_in_hours_average2)
-print(serial_interval_in_hours_sd2)
-```
-
 #Serial interval (By infectiousness start date)
 ```{r}
 #Calculate serial interval in hours
@@ -541,6 +521,9 @@ serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 #Plot
 denscomp(serial_interval_fit_ln_duration, main = "Serial Interval (hours)", xlab = "Serial Interval", ylab = "Density")
 
+#Average
+abline(v = mean(serial_interval_in_hours), col = "red", lty = 2)
+text(mean(serial_interval_in_hours), 0.01, "Mean", col = "red")
 ```
 Log Distribution of Natural History Parameters (Combined)
 ```{r}
