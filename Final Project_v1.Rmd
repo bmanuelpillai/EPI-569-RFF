@@ -266,14 +266,6 @@ Severe <- full_data %>%
 Non_Severe <- full_data %>% 
 	filter(severe == 0)
 ```
-#Subset linelist to Severe and Non-severe RFF
-```{r}
-Severe_cases <- linelist %>% 
-	filter(severe == 1)
-
-Non_Severe_cases <- linelist %>% 
-	filter(severe == 0)
-```
 
 #Incubation period
 ```{r}
@@ -288,16 +280,16 @@ sd_incubation <- linelist %>%
 
 #Incubation period for Severe cases and Non_severe cases
 ```{r}
-mean(Severe_cases$incubation_period)
+mean(Severe$incubation_period)
 #23.43
 
-sd(Severe_cases$incubation_period)
+sd(Severe$incubation_period)
 #6.38
 
-mean(Non_Severe_cases$incubation_period)
+mean(Non_Severe$incubation_period)
 #23.30
 
-sd(Non_Severe_cases$incubation_period)
+sd(Non_Severe$incubation_period)
 #8.43
 ```
 
@@ -347,12 +339,13 @@ linelist <- linelist %>%
 #Calculated end of infectiousness
 linelist <- linelist %>% 
   rowwise() %>% 
-  mutate(infectiousness_end = pmax(recovered2, severe_date, na.rm = TRUE))
+  mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5,recovered2, severe_date, na.rm = TRUE))
 
 #Calculate infectious period
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
 
 ```
+
 
 #Latent Period
 ```{r}
@@ -374,6 +367,14 @@ mean(asymptomatic$infectious_period, na.rm = TRUE)
 sd(asymptomatic$infectious_period, na.rm = TRUE)
 
 mean
+```
+#Subset linelist to Severe and Non-severe RFF
+```{r}
+Severe_cases <- linelist %>% 
+	filter(severe == 1)
+
+Non_Severe_cases <- linelist %>% 
+	filter(severe == 0 & symptomatic == 1)
 ```
 
 #Natural History Stratified by Severity
@@ -467,7 +468,7 @@ denscomp(Infectious_fit_ln_duration, main = "Density Plot of Infectious Period (
 ```{r}
 merged_data$serial_interval_in_hours2
 #Filter Infectious periods
-serial_interval_in_hours <- merged_data$serial_interval_in_hours2[!(is.na(merged_data$serial_interval_in_hours2)) & merged_data$serial_interval_in_hours2 > 0]
+serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
 #Fit distribution
 Serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
@@ -515,7 +516,7 @@ abline(v = mean(infectious_duration), col = "red", lty = 2)
 text(mean(infectious_duration), 0.01, "Mean", col = "red")
 
 #Serial Interval
-serial_interval_in_hours <- merged_data$serial_interval_in_hours2[!(is.na(merged_data$serial_interval_in_hours2)) & merged_data$serial_interval_in_hours2 > 0]
+serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
 serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
 #Plot
