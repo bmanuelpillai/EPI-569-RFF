@@ -11,11 +11,9 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 
 #Load packages
-pacman::p_load(tidyverse, 
-               ggplot2,
+pacman::p_load(ggplot2,
                janitor,
                lubridate,
-               dplyr,
 							 splitstackshape,
 							 earlyR,
 							 incidence,
@@ -23,7 +21,8 @@ pacman::p_load(tidyverse,
 							 EpiEstim,
 							 ggpubr,
 							 deSolve,
-							 reshape2)
+							 reshape2,
+							 tidyverse)
 ```
 
 ### Load data
@@ -411,23 +410,23 @@ date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "expo
 linelist <- linelist %>% 
 	mutate(severe_datetime = as_datetime(severe_date))
 
-#Create datetime Symptom_Onset Variable
-linelist$date_time_symptom_onset <- linelist$exposure0 + 
-  as.difftime(linelist$incubation_period, units = "hours")
-
-#Create datetime Recovery_date variable
-linelist$date_time_recovery <- linelist$date_time_symptom_onset + 
-  as.difftime(linelist$illness_duration, units = "hours")
+# #Create datetime Symptom_Onset Variable
+# linelist$date_time_symptom_onset <- linelist$exposure0 + 
+#   as.difftime(linelist$incubation_period, units = "hours")
+# 
+# #Create datetime Recovery_date variable
+# linelist$date_time_recovery <- linelist$date_time_symptom_onset + 
+#   as.difftime(linelist$illness_duration, units = "hours")
 
 #Calculate start of infectiousness
 linelist <- linelist %>% 
   rowwise() %>% 
-  mutate(infectiousness_start = pmin(exposure1, exposure2, exposure3, exposure4, exposure5, date_time_symptom_onset, na.rm = TRUE))
+  mutate(infectiousness_start = pmin(exposure1, exposure2, exposure3, exposure4, exposure5, onset_datetime, na.rm = TRUE))
 
 #Calculated end of infectiousness
 linelist <- linelist %>% 
 	rowwise() %>% 
-	mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5, date_time_recovery, severe_date, na.rm = TRUE))
+	mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5, recovered_datetime, na.rm = TRUE))
 
 #Calculate infectious period
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
