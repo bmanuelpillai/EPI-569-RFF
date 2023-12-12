@@ -154,19 +154,19 @@ asymp_duration <- med_incubation + med_duration
 
 #Create onset variable
 linelist <- linelist %>% 
-	mutate(onset = case_when(symptomatic == 0 ~ NA, #no symptom onset for asymptomatic cases
+	mutate(onset_datetime = case_when(symptomatic == 0 ~ NA, #no symptom onset for asymptomatic cases
 													 symptomatic == 1 ~ exposure0 + hours(incubation_period), #symptoms start after incubation period
 													 is.na(symptomatic) ~ NA, #keep missing and NA's NA
 													 TRUE ~ NA)) %>% 
-  mutate(onset = date(onset))
+  mutate(onset = date(onset_datetime))
 
 #Create recovered variable
 linelist <- linelist %>% 
-	mutate(recovered = case_when((symptomatic == 0 | is.na(symptomatic)) ~ exposure0 + hours(asymp_duration), #imputed infectious periods for asymptomatic or missing
+	mutate(recovered_datetime = case_when((symptomatic == 0 | is.na(symptomatic)) ~ exposure0 + hours(asymp_duration), #imputed infectious periods for asymptomatic or missing
 															 (symptomatic == 1 & severe == 1) ~ pmax(onset + hours(illness_duration), severe_date), #for severe cases, recovery is the later of illness duration end or severe date
 															 (symptomatic == 1 & severe == 0) ~ onset + hours(illness_duration),
 															 TRUE ~ NA)) %>% 
-	mutate(recovered = date(recovered))
+	mutate(recovered = date(recovered_datetime))
 ```
 
 ## Epi curve by onset date
@@ -359,28 +359,28 @@ Non_Severe_cases <- linelist %>%
 
 ```{r}
 mean_incubation <- linelist %>%
-	summarise(mean(incubation_period, na.rm = T))
+	summarise(mean(incubation_period, na.rm = T)) %>% 
+	as.numeric()
 #23.36
 
-#mean_incubation <- mean(linelist$incubation_period, na.rm = TRUE)
-
 sd_incubation <- linelist %>% 
-	summarise(sd(incubation_period, na.rm = T))
+	summarise(sd(incubation_period, na.rm = T)) %>% 
+	as.numeric()
 #7.38
 ```
 
 **Incubation period for Severe cases and Non_severe cases**
 ```{r}
-mean(Severe_cases$incubation_period)
+mean_incubation_severe <- mean(Severe_cases$incubation_period)
 #23.43
 
-sd(Severe_cases$incubation_period)
+sd_incubation_severe <- sd(Severe_cases$incubation_period)
 #6.38
 
-mean(Non_Severe_cases$incubation_period)
+mean_incubation_nonsevere <- mean(Non_Severe_cases$incubation_period)
 #23.30
 
-sd(Non_Severe_cases$incubation_period)
+sd_incubation_nonsevere <- sd(Non_Severe_cases$incubation_period)
 #8.43
 ```
 
@@ -388,13 +388,13 @@ sd(Non_Severe_cases$incubation_period)
 
 ```{r}
 mean_duration <- linelist %>%
-	summarise(mean(illness_duration, na.rm = T))
+	summarise(mean = mean(illness_duration, na.rm = T)) %>% 
+	as.numeric()
 #25.02
 
-#mean_duration <- mean(linelist$illness_duration, na.rm = TRUE)
-
 ds_duration <- linelist %>%
-	summarise(sd(illness_duration, na.rm = T))
+	summarise(sd = sd(illness_duration, na.rm = T)) %>% 
+	as.numeric()
 #9.09
 ```
 
@@ -404,15 +404,18 @@ ds_duration <- linelist %>%
 date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset", "date_time_recovery", "severe_date")
 
 # Loop through the list and convert each column
-#for (col_name in date_time_columns) {
-#  linelist[[col_name]] <- as.POSIXct(linelist[[col_name]], format = "%Y-%m-%d %H:%M:%S")
-#}
+# for (col_name in date_time_columns) {
+#   linelist[[col_name]] <- as.POSIXct(linelist[[col_name]], format = "%Y-%m-%d %H:%M:%S")
+# }
 
-#Create Symptom_Onset Variable
+linelist <- linelist %>% 
+	mutate(severe_datetime = as_datetime(severe_date))
+
+#Create datetime Symptom_Onset Variable
 linelist$date_time_symptom_onset <- linelist$exposure0 + 
   as.difftime(linelist$incubation_period, units = "hours")
 
-#Create Recovery_date variable
+#Create datetime Recovery_date variable
 linelist$date_time_recovery <- linelist$date_time_symptom_onset + 
   as.difftime(linelist$illness_duration, units = "hours")
 
