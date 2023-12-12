@@ -69,6 +69,11 @@ linelist <- raw_data %>%
            'exposure4' = 'date_time_fourth_exposure',
            'exposure5' = 'date_time_fifth_exposure',
   				 'severe_date' = 'date_you_became_severe')) %>% 
+	mutate(exposure1 = as_datetime(exposure1),
+				 exposure2 = as_datetime(exposure2),
+				 exposure3 = as_datetime(exposure3),
+				 exposure4 = as_datetime(exposure4),
+				 exposure5 = as_datetime(exposure4)) %>% 
   
   #recode gender variable as numeric (0 = Female, 1 = Male, 2 = Non-binary)
   mutate(gender = recode(gender, "Female" = 0, "Male" = 1, "Non-binary" = 2)) %>% 
@@ -357,6 +362,8 @@ mean_incubation <- linelist %>%
 	summarise(mean(incubation_period, na.rm = T))
 #23.36
 
+#mean_incubation <- mean(linelist$incubation_period, na.rm = TRUE)
+
 sd_incubation <- linelist %>% 
 	summarise(sd(incubation_period, na.rm = T))
 #7.38
@@ -383,6 +390,8 @@ sd(Non_Severe_cases$incubation_period)
 mean_duration <- linelist %>%
 	summarise(mean(illness_duration, na.rm = T))
 #25.02
+
+#mean_duration <- mean(linelist$illness_duration, na.rm = TRUE)
 
 ds_duration <- linelist %>%
 	summarise(sd(illness_duration, na.rm = T))
@@ -862,10 +871,8 @@ mean_duration_nonsevere <- linelist %>%
 	as.numeric()
 #25.66667
 
-mean_latent <- as.numeric(mean_latent)
+mean_latent <- mean(linelist$latent_period, na.rm = TRUE)
 #23.36364
-
-
 
 ```
 
@@ -884,7 +891,7 @@ sir_ode <- function(times,init,parms){
 
 #Define parameters
 parms <- c(alpha = 5,              # alpha = daily contacts
-           beta = 0.62,             # beta = probability of infection on contact
+           beta = 0.28,             # beta = probability of infection on contact
 				 	 gamma = 1/(mean_latent/24),  # gamma = rate of infectiousness onset
            sigma = 1/(mean_duration/24))# sigma = rate of recovery per day
 
