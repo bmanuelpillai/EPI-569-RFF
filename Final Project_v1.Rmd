@@ -371,14 +371,7 @@ ds_duration <- linelist %>%
 ## Infectious Period
 
 ```{r}
-# List of variables to convert
-date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset", "date_time_recovery", "severe_date")
-
-# Loop through the list and convert each column
-# for (col_name in date_time_columns) {
-#   linelist[[col_name]] <- as.POSIXct(linelist[[col_name]], format = "%Y-%m-%d %H:%M:%S")
-# }
-
+# Convert to datetime
 linelist <- linelist %>% 
 	mutate(severe_datetime = as_datetime(severe_date))
 
@@ -413,6 +406,11 @@ linelist <- linelist %>%
 #Calculate infectious period
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
 
+mean_infectious <- mean(linelist$infectious_period, na.rm = TRUE)
+#66.1
+sd_infectious <- sd(linelist$infectious_period, na.rm = TRUE)
+#43.9
+
 ```
 
 
@@ -420,27 +418,35 @@ linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, l
 
 ```{r}
 linelist$latent_period <- as.numeric(difftime(linelist$infectiousness_start, linelist$exposure0, units = "hours"))
+
+mean_latent <- mean(linelist$latent_period, na.rm = TRUE)
+#16.0
+sd_latent <- sd(linelist$latent_period, na.rm = TRUE)
+#10.5
 ```
 
-## Mean and SD for Infectious Period Stratified by symptom status and
+## Mean and SD for Infectious Period Stratified by symptom status
 
 ```{r}
 # Infectious Period for symptomatic
 symptomatic <- linelist %>% 
   filter(symptomatic == 1)
-mean(symptomatic$infectious_period, na.rm = TRUE)
-sd(symptomatic$infectious_period, na.rm = TRUE)
+mean_infectious_symptomatic <- mean(symptomatic$infectious_period, na.rm = TRUE)
+#69.7
+sd_infectious_symptomatic <- sd(symptomatic$infectious_period, na.rm = TRUE)
+#45.3
 
 # Infectious Period for asymptomatic
 asymptomatic <- linelist %>% 
   filter(symptomatic == 0)
-mean(asymptomatic$infectious_period, na.rm = TRUE)
-sd(asymptomatic$infectious_period, na.rm = TRUE)
+mean_infectious_asymptomatic <- mean(asymptomatic$infectious_period, na.rm = TRUE)
+#38.1
+sd_infectious_asymptomatic <- sd(asymptomatic$infectious_period, na.rm = TRUE)
+#11.1
 
-mean
 ```
 
-#Subset linelist to Severe and Non-severe RFF
+**Subset linelist to Severe and Non-severe RFF**
 ```{r}
 Severe_cases <- linelist %>% 
 	filter(severe == 1)
@@ -449,7 +455,7 @@ Non_Severe_cases <- linelist %>%
 	filter(severe == 0 & symptomatic == 1)
 ```
 
-#Natural History Stratified by Severity
+## Natural History Stratified by Severity
 ```{r}
 # Infectious Period for Severe
 mean(Severe_cases$infectious_period, na.rm = TRUE)
