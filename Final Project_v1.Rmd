@@ -95,7 +95,18 @@ linelist <- raw_data %>%
 ### Important values
 ```{r}
 total_pop <- nrow(roster)
-palette <- c("#66B4BE", "#7BA536", "#E28571", "#636467")
+total_cases <- nrow(linelist)
+palette <- c(blue = "#66B4BE",
+						 green = "#7BA536",
+						 red = "#E28571",
+						 gray = "#636467", 
+						 dark_gray = "#49494B",
+						 gray_blue = "#1C3052",
+						 teal = "#24525A",
+						 dark_green = "#35591C",
+						 dark_teal = "#0D3840",
+						 dark_red = "#722C21",
+						 yellow = "#F1A208")
 ```
 
 
@@ -559,28 +570,29 @@ denscomp(illness_fit_ln_duration, main = "Density Plot of Illness Duration (Logn
 ## Generating Plots for Infectious Period
 ```{r}
 #Filter Infectious periods
-Infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period)) & linelist$infectious_period > 0]
+infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period)) & linelist$infectious_period > 0]
 
 #Fit distribution
-Infectious_fit_ln_duration <- fitdist(Infectious_duration, "lnorm")
+infectious_fit_ln_duration <- fitdist(infectious_duration, "lnorm")
 
-summary(Infectious_fit_ln_duration)
+summary(infectious_fit_ln_duration)
 
 #Plot
-denscomp(Infectious_fit_ln_duration, main = "Density Plot of Infectious Period (Lognormal)")
+denscomp(infectious_fit_ln_duration, main = "Density Plot of Infectious Period (Lognormal)")
 ```
 
 ```{r, eval=FALSE}
-merged_data$serial_interval_in_hours2
 #Filter Infectious periods
-serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
+serial_interval_in_hours <-
+	merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours))
+																			 & merged_data$serial_interval_in_hours > 0]
 #Fit distribution
-Serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
+serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
 
-summary(Serial_interval_fit_ln_duration)
+summary(serial_interval_fit_ln_duration)
 #Plot
-denscomp(Serial_interval_fit_ln_duration, main = "Density Plot of Serial Interval (Lognormal)")
+denscomp(serial_interval_fit_ln_duration, main = "Density Plot of Serial Interval (Lognormal)")
 ```
 Log Distribution of Natural History Parameters
 ```{r, eval=FALSE}
@@ -588,91 +600,119 @@ Log Distribution of Natural History Parameters
 par(mfrow=c(1,4))
 
 #Incubation Period
-incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
-incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
+# incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
+# incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
 
 #Plot
-denscomp(incubation_fit_ln_duration, main = "Incubation Period (hours)", xlab = "Incubation Period", ylab = "Density")
-
-#Average
-abline(v = mean(incubation_duration), col = "red", lty = 2)
-text(mean(incubation_duration), 0.01, "Mean", col = "red")
+denscomp(incubation_fit_ln_duration,
+				 main = "Incubation Period (hours)",
+				 xlab = "Incubation Period",
+				 ylab = "Density",
+				 fitcol = palette["red"],
+				 addlegend = FALSE)
+abline(v = mean(incubation_duration),
+			 col = palette["red"],
+			 lty = 2)
+text(mean(incubation_duration), 0.05, "Mean", col = palette["dark_red"])
 
 #Illness Duration
-illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
-illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
+# illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
+# illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
 
 #Plot
-denscomp(illness_fit_ln_duration, main = "Illness Duration (hours)", xlab = "Illness Duration", ylab = "Density")
-
-#Average
-abline(v = mean(illness_duration), col = "red", lty = 2)
-text(mean(illness_duration), 0.01, "Mean", col = "red")
+denscomp(illness_fit_ln_duration,
+				 main = "Illness Duration (hours)",
+				 xlab = "Illness Duration",
+				 ylab = "Density",
+				 fitcol = palette["blue"],
+				 addlegend = FALSE)
+abline(v = mean(illness_duration),
+			 col = palette["blue"],
+			 lty = 2)
+text(mean(illness_duration), 0.01, "Mean", col = palette["dark_blue"])
 
 #Infectious Period
-infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period)) & linelist$infectious_period > 0]
-infectious_fit_ln_duration <- fitdist(infectious_duration, "lnorm")
+# infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period))
+# 																									& linelist$infectious_period > 0]
+# infectious_fit_ln_duration <- fitdist(infectious_duration, "lnorm")
 
 #Plot
-denscomp(infectious_fit_ln_duration, main = "Infectious Period (hours)", xlab = "Infectious Period", ylab = "Density")
-
-#Average
-abline(v = mean(infectious_duration), col = "red", lty = 2)
-text(mean(infectious_duration), 0.01, "Mean", col = "red")
+denscomp(infectious_fit_ln_duration,
+				 main = "Infectious Period (hours)",
+				 xlab = "Infectious Period",
+				 ylab = "Density",
+				 fitcol = palette["green"],
+				 addlegend = FALSE)
+abline(v = mean(infectious_duration),
+			 col = palette["dark_green"],
+			 lty = 2)
+text(mean(infectious_duration), 0.012, "Mean", col = palette["dark_green"])
 
 #Serial Interval
-serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
-serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
+# serial_interval_in_hours <-
+# 	merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) &
+# 																			 	merged_data$serial_interval_in_hours > 0]
+# serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
 #Plot
-denscomp(serial_interval_fit_ln_duration, main = "Serial Interval (hours)", xlab = "Serial Interval", ylab = "Density")
-
-#Average
-abline(v = mean(serial_interval_in_hours), col = "red", lty = 2)
-text(mean(serial_interval_in_hours), 0.01, "Mean", col = "red")
+denscomp(serial_interval_fit_ln_duration,
+				 main = "Serial Interval (hours)",
+				 xlab = "Serial Interval",
+				 ylab = "Density",
+				 fitcol = palette["yellow"],
+				 addlegend = FALSE)
+abline(v = mean(serial_interval_in_hours),
+			 col = palette["yellow"],
+			 lty = 2)
+text(mean(serial_interval_in_hours), 0.02, "Mean", col = palette["yellow"])
 ```
-Log Distribution of Natural History Parameters (Combined)
+
+**Log Distribution of Natural History Parameters (Combined)**
 ```{r, eval=FALSE}
 #Create Graph
 par(mfrow=c(1,1))
 
 #Incubation Period
-incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
-incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
-
-#Illness Duration
-illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
-illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
-
-#Infectious Period
-infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period)) & linelist$infectious_period > 0]
-infectious_fit_ln_duration <- fitdist(infectious_duration, "lnorm")
-
-#Serial Interval
-serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
-serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
+# incubation_duration <- linelist$incubation_period[!(is.na(linelist$incubation_period)) & linelist$incubation_period > 0]
+# incubation_fit_ln_duration <- fitdist(incubation_duration, "lnorm")
+# 
+# #Illness Duration
+# illness_duration <- linelist$illness_duration[!(is.na(linelist$illness_duration)) & linelist$illness_duration > 0]
+# illness_fit_ln_duration <- fitdist(illness_duration, "lnorm")
+# 
+# #Infectious Period
+# infectious_duration <- linelist$infectious_period[!(is.na(linelist$infectious_period)) & linelist$infectious_period > 0]
+# infectious_fit_ln_duration <- fitdist(infectious_duration, "lnorm")
+# 
+# #Serial Interval
+# serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
+# serial_interval_fit_ln_duration <- fitdist(serial_interval_in_hours, "lnorm")
 
 #X-axis setting
 max_duration <- max(c(max(incubation_duration), max(illness_duration), max(infectious_duration), max(serial_interval_in_hours)))
 
 #Incubation Period
-denscomp(incubation_fit_ln_duration, main = "Combined Density Plot", xlab = "Time (days)", ylab = "Density", xlim = c(0, max_duration))
-
+denscomp(incubation_fit_ln_duration,
+				 main = "Combined Density Plot",
+				 xlab = "Time (days)",
+				 ylab = "Density",
+				 xlim = c(0, max_duration),
+				 fitcol = palette["red"],
+				 fitlty = 2,
+				 fitlwd = 2)
 #Illness Duration
-lines(density(illness_duration), col = "blue", lty = 2, lwd = 2)  # Adjust the line thickness with lwd parameter
+lines(density(illness_duration), col = palette["blue"], lty = 2, lwd = 2)  # Adjust the line thickness with lwd parameter
 
 #Infectious Period
-lines(density(infectious_duration), col = "green", lty = 2, lwd = 2)  # Adjust the line thickness with lwd parameter
+lines(density(infectious_duration), col = palette["green"], lty = 2, lwd = 2)  # Adjust the line thickness with lwd parameter
 
 #Serial Interval
-lines(density(serial_interval_in_hours), col = "orange", lty = 2, lwd = 2)  # Adjust the line thickness with lwd parameter
+lines(density(serial_interval_in_hours), col = palette["yellow"], lty = 2, lwd = 2)  # Adjust the line thickness with lwd parameter
 
 #Legend
-legend("topright", legend = c("Incubation", "Illness", "Infectious", "Serial Interval"), col = c("red", "blue", "green", "orange"), lty = 2, lwd = 2, cex = 0.8)
+legend("topright", legend = c("Incubation", "Illness", "Infectious", "Serial Interval"), col = palette[c("red", "blue", "green", "yellow")], lty = 2, lwd = 2, cex = 0.8)
 
 ```
-
-
 
 # Demographic Information
 
