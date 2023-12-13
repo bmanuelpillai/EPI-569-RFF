@@ -4,7 +4,7 @@ author: "Meghna Ray, Charlotte Doran, and Bevin Manuelpillai"
 date: "`r Sys.Date()`"
 output: html_document
 execute:
-	cache: true
+  cache: true
 ---
 
 # Setup
@@ -581,7 +581,7 @@ summary(infectious_fit_ln_duration)
 denscomp(infectious_fit_ln_duration, main = "Density Plot of Infectious Period (Lognormal)")
 ```
 
-```{r, eval=FALSE}
+```{r}
 #Filter Infectious periods
 serial_interval_in_hours <-
 	merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours))
@@ -595,7 +595,7 @@ summary(serial_interval_fit_ln_duration)
 denscomp(serial_interval_fit_ln_duration, main = "Density Plot of Serial Interval (Lognormal)")
 ```
 Log Distribution of Natural History Parameters
-```{r, eval=FALSE}
+```{r}
 #Create Graph
 par(mfrow=c(1,4))
 
@@ -668,7 +668,7 @@ text(mean(serial_interval_in_hours), 0.02, "Mean", col = palette["yellow"])
 ```
 
 **Log Distribution of Natural History Parameters (Combined)**
-```{r, eval=FALSE}
+```{r}
 #Create Graph
 par(mfrow=c(1,1))
 
@@ -718,7 +718,7 @@ legend("topright", legend = c("Incubation", "Illness", "Infectious", "Serial Int
 
 **Compare Period Prevalence of Undergraduates and Graduate Year 1 vs those that are Graduate Year 2 and #doctorate students**
 ```{r}
-#Create new variable to dicotomize level variable
+#Create new variable to dichotomize level variable
 #Get numerator
 full_data <- full_data %>% 
 	mutate(education = ifelse(level %in% c("Graduate Year 1", "Senior"),0,1))
@@ -733,8 +733,8 @@ roster <- roster %>%
 table(roster$education)
 # 64 = 0 and 90 = 1
 
-period_prevalance_G1S = 44/64
-period_prevalance_G2D = 37/90
+period_prevalance_G1S <- sum(full_data$education == 0)/sum(roster$education == 0)
+period_prevalance_G2D <- sum(full_data$education == 1)/sum(roster$education == 1)
 ```
 
 
@@ -907,20 +907,11 @@ $\frac{dR_s}{dt} = 0.35 \sigma I$
 ## Observed Data
 
 ```{r}
-mean_duration_severe <- linelist %>%
-	filter(severe == 1) %>%
-	summarize(mean(illness_duration, na.rm = TRUE)) %>% 
-	as.numeric()
-#24.39286
-
-mean_duration_nonsevere <- linelist %>%
-	filter(severe == 0) %>%
-	summarize(mean = mean(illness_duration, na.rm = TRUE)) %>% 
-	as.numeric()
-#25.66667
+mean_duration <- mean(linelist$illness_duration, na.rm = TRUE)
+#25.02
 
 mean_latent <- mean(linelist$latent_period, na.rm = TRUE)
-#23.36364
+#15.96
 
 ```
 
@@ -939,7 +930,7 @@ sir_ode <- function(times,init,parms){
 
 #Define parameters
 parms <- c(alpha = 5,              # alpha = daily contacts
-           beta = 0.28,             # beta = probability of infection on contact
+           beta = 0.275,             # beta = probability of infection on contact
 				 	 gamma = 1/(mean_latent/24),  # gamma = rate of infectiousness onset
            sigma = 1/(mean_duration/24))# sigma = rate of recovery per day
 
@@ -979,23 +970,6 @@ as.numeric(sir_out_long %>%
 ## Waning Immunity
 
 ```{r}
-mean_duration_severe <- linelist %>%
-	filter(severe == 1) %>%
-	summarize(mean = mean(illness_duration, na.rm = TRUE)) %>% 
-	as.numeric()
-#24.39286
-
-mean_duration_nonsevere <- linelist %>%
-	filter(severe == 0) %>%
-	summarize(mean = mean(illness_duration, na.rm = TRUE)) %>% 
-	as.numeric()
-#25.66667
-
-mean_latent <- as.numeric(mean_latent)
-#23.36364
-```
-
-```{r}
 #Create function for model equations
 sir_ode <- function(times,init,parms){
   with(as.list(c(parms,init)), {
@@ -1011,11 +985,11 @@ sir_ode <- function(times,init,parms){
 
 #Define parameters
 parms <- c(alpha = 5,              # alpha = daily contacts
-           beta = 0.62,             # beta = probability of infection on contact
+           beta = 0.275,             # beta = probability of infection on contact
 				 	 gamma = 1/(mean_latent/24),  # gamma = rate of infectiousness onset
            sigma = 1/(mean_duration/24),# sigma = rate of recovery per day
            mu = 1/(mean_duration/24),   # mu = rate of severe disease
-           omega = 0)            # omega = rate of immune loss per day
+           omega = 1/20)            # omega = rate of immune loss per day
 
 #Set initial conditions
 init <- c(S = 153,
@@ -1024,7 +998,7 @@ init <- c(S = 153,
 					R = 0,
 					R_s = 0)
 
-times <- seq(0, 30, length.out=30)
+times <- seq(0, 90, length.out=90)
 sir_out <- lsoda(init,times,sir_ode,parms)
 sir_out_long <- melt(as.data.frame(sir_out),"time")
 
@@ -1128,9 +1102,9 @@ plot2 <- ggplot(data=plot2.data, aes(x=dates, y=I, labs=FALSE)) +
   labs(x = "Exposure Date", 
        y = "Number of Cases (bars) and Rt (line;95% CI)",
        title = "Epi Curve for RFF Outbreak (Mean SI=1.7)") +
-  geom_hline(aes(yintercept=1), colour="#E28571", linetype="dashed", size=0.5) +
+  geom_hline(aes(yintercept=1), colour=palette["red"], linetype="dashed", size=0.5) +
   geom_errorbar(data=plot2.data, aes(ymax=upperCI, ymin=lowerCI, width=0.6),stat="identity", size=0.8, show.legend=FALSE) +
-  geom_line(data=plot2.data[!is.na(plot2.data$R),],aes(x=dates, y=R), color='#66B4BE', size=0.5) +
+  geom_line(data=plot2.data[!is.na(plot2.data$R),],aes(x=dates, y=R), color=palette["blue"], size=0.5) +
   geom_point(data = plot2.data, aes(x=dates, y=R), size=1.2, show.legend=FALSE) 
 plot2
 ```
