@@ -259,121 +259,10 @@ plot3
 
 # Natural History Parameters
 
-**Merge roster and linelist**
+**Merge roster and linelist, create new variables**
 ```{r}
 full_data <- left_join(linelist, roster, by = "case_id")
-```
 
-**Subset to Severe and Non-severe RFF**
-```{r}
-Severe <- full_data %>% 
-	filter(severe == 1)
-
-Non_Severe <- full_data %>% 
-	filter(severe == 0)
-```
-
-**Subset linelist to Severe and Non-severe RFF**
-```{r}
-Severe_cases <- linelist %>% 
-	filter(severe == 1)
-
-Non_Severe_cases <- linelist %>% 
-	filter(severe == 0)
-```
-
-**Subset to Symptomatic and Asymptomatic**
-```{r}
-symptomatic <- linelist %>% 
-  filter(symptomatic == 1)
-
-asymptomatic <- linelist %>% 
-  filter(symptomatic == 0)
-
-
-nonsevere_symptomatic <- linelist %>% 
-  filter(symptomatic == 1 & severe != 1)
-```
-
-
-## Incubation period
-
-```{r}
-mean_incubation <- linelist %>%
-	summarise(mean(incubation_period, na.rm = T)) %>% 
-	as.numeric()
-#23.36
-
-sd_incubation <- linelist %>% 
-	summarise(sd(incubation_period, na.rm = T)) %>% 
-	as.numeric()
-#7.38
-```
-
-
-**Incubation period for Severe cases and Non_severe cases**
-
-```{r}
-mean_incubation_severe <- mean(Severe_cases$incubation_period)
-#23.43
-
-sd_incubation_severe <- sd(Severe_cases$incubation_period)
-#6.38
-
-mean_incubation_nonsevere <- mean(Non_Severe_cases$incubation_period)
-#23.30
-
-sd_incubation_nonsevere <- sd(Non_Severe_cases$incubation_period)
-#8.43
-
-#incubation period
-mean(nonsevere_symptomatic$incubation_period)
-sd(nonsevere_symptomatic$incubation_period)
-
-#latent period
-mean(nonsevere_symptomatic$latent_period)
-sd(nonsevere_symptomatic$latent_period)
-
-#duration of illness
-mean(nonsevere_symptomatic$illness_duration)
-sd(nonsevere_symptomatic$illness_duration)
-
-#infectious period
-mean(nonsevere_symptomatic$infectious_period)
-sd(nonsevere_symptomatic$infectious_period)
-```
-
-
-**Latent period for asymptomatic cases and symptomatic cases**
-```{r}
-mean(symptomatic$latent_period)
-#18.03
-sd(symptomatic$latent_period)
-#9.25
-mean(asymptomatic$latent_period, na.rm = T)
-#15.89
-sd(asymptomatic$latent_period, na.rm = T)
-#11.08
-```
-
-
-## Illness duration
-```{r}
-mean_duration <- linelist %>%
-	summarise(mean = mean(illness_duration, na.rm = T)) %>% 
-	as.numeric()
-#25.02
-
-ds_duration <- linelist %>%
-	summarise(sd = sd(illness_duration, na.rm = T)) %>% 
-	as.numeric()
-#9.09
-```
-
-
-## Infectious Period
-
-```{r}
 # Convert to datetime
 linelist <- linelist %>% 
 	mutate(severe_datetime = as_datetime(severe_date))
@@ -405,48 +294,21 @@ linelist <- linelist %>%
 	rowwise() %>% 
 	mutate(infectiousness_end = pmax(exposure1, exposure2, exposure3, exposure4, exposure5, recovered_datetime, na.rm = TRUE))
 
-
-#Calculate infectious period
+#Calculate case-level infectious period
 linelist$infectious_period <- as.numeric(difftime(linelist$infectiousness_end, linelist$infectiousness_start, units = "hours"))
 
-mean_infectious <- mean(linelist$infectious_period, na.rm = TRUE)
-#66.1
-sd_infectious <- sd(linelist$infectious_period, na.rm = TRUE)
-#43.9
-
-```
-
-
-## Latent Period
-
-```{r}
+#Calculate case-level latent period
 linelist$latent_period <- as.numeric(difftime(linelist$infectiousness_start, linelist$exposure0, units = "hours"))
 
-mean_latent <- mean(linelist$latent_period, na.rm = TRUE)
-#16.0
-sd_latent <- sd(linelist$latent_period, na.rm = TRUE)
-#10.5
 ```
 
-## Mean and SD for Infectious Period Stratified by symptom status
-
+**Subset to Severe and Non-severe RFF**
 ```{r}
-# Infectious Period for symptomatic
-symptomatic <- linelist %>% 
-  filter(symptomatic == 1)
-mean_infectious_symptomatic <- mean(symptomatic$infectious_period, na.rm = TRUE)
-#69.7
-sd_infectious_symptomatic <- sd(symptomatic$infectious_period, na.rm = TRUE)
-#45.3
+Severe <- full_data %>% 
+	filter(severe == 1)
 
-# Infectious Period for asymptomatic
-asymptomatic <- linelist %>% 
-  filter(symptomatic == 0)
-mean_infectious_asymptomatic <- mean(asymptomatic$infectious_period, na.rm = TRUE)
-#38.1
-sd_infectious_asymptomatic <- sd(asymptomatic$infectious_period, na.rm = TRUE)
-#11.1
-
+Non_Severe <- full_data %>% 
+	filter(severe == 0)
 ```
 
 **Subset linelist to Severe and Non-severe RFF**
@@ -458,19 +320,142 @@ Non_Severe_cases <- linelist %>%
 	filter(severe == 0 & symptomatic == 1)
 ```
 
+**Subset to Symptomatic and Asymptomatic**
+```{r}
+symptomatic <- linelist %>% 
+  filter(symptomatic == 1)
+
+asymptomatic <- linelist %>% 
+  filter(symptomatic == 0)
+
+nonsevere_symptomatic <- linelist %>% 
+  filter(symptomatic == 1 & severe != 1)
+```
+
+
+## Incubation period
+
+```{r}
+mean_incubation <- mean(linelist$incubation_period, na.rm = T)
+#23.36
+
+sd_incubation <- sd(linelist$incubation_period, na.rm = T)
+#7.38
+```
+
+
+**Incubation period for Severe cases and Non_severe cases**
+
+```{r}
+mean_incubation_severe <- mean(Severe_cases$incubation_period)
+#23.43
+
+sd_incubation_severe <- sd(Severe_cases$incubation_period)
+#6.38
+
+mean_incubation_nonsevere <- mean(Non_Severe_cases$incubation_period)
+#23.30
+
+sd_incubation_nonsevere <- sd(Non_Severe_cases$incubation_period)
+#8.43
+```
+
+**Natural history among non-severe symptomatic cases
+```{r}
+#incubation period
+mean(nonsevere_symptomatic$incubation_period)
+sd(nonsevere_symptomatic$incubation_period)
+
+#latent period
+mean(nonsevere_symptomatic$latent_period)
+sd(nonsevere_symptomatic$latent_period)
+
+#duration of illness
+mean(nonsevere_symptomatic$illness_duration)
+sd(nonsevere_symptomatic$illness_duration)
+
+#infectious period
+mean(nonsevere_symptomatic$infectious_period)
+sd(nonsevere_symptomatic$infectious_period)
+```
+
+**Latent period for asymptomatic cases and symptomatic cases**
+```{r}
+mean(symptomatic$latent_period)
+#18.03
+sd(symptomatic$latent_period)
+#9.25
+mean(asymptomatic$latent_period, na.rm = T)
+#15.89
+sd(asymptomatic$latent_period, na.rm = T)
+#11.08
+```
+
+
+## Illness duration
+```{r}
+mean_duration <- mean(linelist$illness_duration, na.rm = T)
+#25.02
+
+ds_duration <- sd(linelist$illness_duration, na.rm = T)
+#9.09
+```
+
+
+## Infectious Period
+
+```{r}
+#Calculate infectious period
+mean_infectious <- mean(linelist$infectious_period, na.rm = TRUE)
+mean_infectious
+#66.1
+sd_infectious <- sd(linelist$infectious_period, na.rm = TRUE)
+sd_infectious
+#43.9
+
+```
+
+## Latent Period
+
+```{r}
+mean_latent <- mean(linelist$latent_period, na.rm = TRUE)
+mean_latent
+#16.0
+sd_latent <- sd(linelist$latent_period, na.rm = TRUE)
+sd_latent
+#10.5
+```
 ## Natural History Stratified by Severity
 ```{r}
 # Infectious Period for Severe
-mean(Severe_cases$infectious_period, na.rm = TRUE)
-sd(Severe_cases$infectious_period, na.rm = TRUE)
+mean_infectious_severe <- mean(Severe_cases$infectious_period, na.rm = TRUE)
+sd_infectious_severe <- sd(Severe_cases$infectious_period, na.rm = TRUE)
 
 # Infectious Period for not severe
-mean(Non_Severe_cases$infectious_period, na.rm = TRUE)
-sd(Non_Severe_cases$infectious_period, na.rm = TRUE)
+mean_infectious_nonsevere <- mean(Non_Severe_cases$infectious_period, na.rm = TRUE)
+sd_infectious_nonsevere <- sd(Non_Severe_cases$infectious_period, na.rm = TRUE)
 
 # Latent Period for Severe
-mean(Severe_cases$latent_period, na.rm = TRUE)
-sd(Severe_cases$latent_period, na.rm = TRUE)
+mean_latent_severe <- mean(Severe_cases$latent_period, na.rm = TRUE)
+sd_latent_severe <- sd(Severe_cases$latent_period, na.rm = TRUE)
+```
+
+
+## Mean and SD for Infectious Period Stratified by symptom status
+
+```{r}
+# Infectious Period for symptomatic
+mean_infectious_symptomatic <- mean(symptomatic$infectious_period, na.rm = TRUE)
+#69.7
+sd_infectious_symptomatic <- sd(symptomatic$infectious_period, na.rm = TRUE)
+#45.3
+
+# Infectious Period for asymptomatic
+mean_infectious_asymptomatic <- mean(asymptomatic$infectious_period, na.rm = TRUE)
+#38.1
+sd_infectious_asymptomatic <- sd(asymptomatic$infectious_period, na.rm = TRUE)
+#11.1
+
 ```
 
 ## Serial Interval
