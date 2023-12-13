@@ -441,7 +441,7 @@ sd_latent_severe <- sd(Severe_cases$latent_period, na.rm = TRUE)
 ```
 
 
-## Mean and SD for Infectious Period Stratified by symptom status
+**Mean and SD for Infectious Period Stratified by symptom status**
 
 ```{r}
 # Infectious Period for symptomatic
@@ -467,61 +467,65 @@ sd_infectious_asymptomatic <- sd(asymptomatic$infectious_period, na.rm = TRUE)
 merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id", suffixes = c("_infected", "_infector"))
 
 #Calculate serial interval in days
-merged_data$serial_interval_in_days <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "days"))
+merged_data$serial_interval_in_days <- 
+	as.numeric(difftime(merged_data$onset_datetime_infected,
+											merged_data$onset_datetime_infector,
+											units = "days"))
 
 serial_interval_in_days_average <- mean(merged_data$serial_interval_in_days, na.rm = T)
-serial_interval_in_days_sd<- sd(merged_data$serial_interval_in_days, na.rm = T)
+#1.81
+serial_interval_in_days_sd <- sd(merged_data$serial_interval_in_days, na.rm = T)
+#2.18
 
 #Calculate serial interval in hours
-merged_data$serial_interval_in_hours <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "hours"))
+merged_data$serial_interval_in_hours <-
+	as.numeric(difftime(merged_data$onset_datetime_infected,
+											merged_data$onset_datetime_infector,
+											units = "hours"))
 
 serial_interval_in_hours_average <- mean(merged_data$serial_interval_in_hours, na.rm = T)
-serial_interval_in_hours_sd <- sd(merged_data$serial_interval_in_hours, na.rm = T)
-
-print(serial_interval_in_hours_average)
 #43.5
-print(serial_interval_in_hours_sd)
+serial_interval_in_hours_sd <- sd(merged_data$serial_interval_in_hours, na.rm = T)
 #52.2
-
-#Calculate serial interval in minutes
-merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
 ```
 
 **Serial Interval (By Infectiousness End Date)**
 ```{r}
-#Get infector and infected columns
-merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id", suffixes = c("_infected", "_infector"))
-
 #Calculate serial interval in days
-merged_data$serial_interval_in_days2 <- as.numeric(difftime(merged_data$infectiousness_end_infected, merged_data$infectiousness_end_infector, units = "days"))
+merged_data$serial_interval_in_days2 <-
+	as.numeric(difftime(merged_data$infectiousness_end_infected,
+											merged_data$infectiousness_end_infector,
+											units = "days"))
 
 serial_interval_in_days_average2 <- mean(merged_data$serial_interval_in_days2, na.rm = T)
+#1.20
 serial_interval_in_days_sd2 <- sd(merged_data$serial_interval_in_days2, na.rm = T)
+#2.48
 
 #Calculate serial interval in hours
-merged_data$serial_interval_in_hours2 <- as.numeric(difftime(merged_data$infectiousness_end_infected, merged_data$infectiousness_end_infector, units = "hours"))
+merged_data$serial_interval_in_hours2 <-
+	as.numeric(difftime(merged_data$infectiousness_end_infected,
+											merged_data$infectiousness_end_infector,
+											units = "hours"))
 
 serial_interval_in_hours_average2 <- mean(merged_data$serial_interval_in_hours2, na.rm = T)
-serial_interval_in_hours_sd2 <- sd(merged_data$serial_interval_in_hours2, na.rm = T)
-
-print(serial_interval_in_hours_average2)
 #28.9
-print(serial_interval_in_hours_sd2)
-#59.7
+serial_interval_in_hours_sd2 <- sd(merged_data$serial_interval_in_hours2, na.rm = T)
+#59.64
 ```
 
 **Serial interval (By infectiousness start date)**
 
 ```{r}
 #Calculate serial interval in hours
-merged_data$serial_interval_in_hours3 <- as.numeric(difftime(merged_data$infectiousness_start_infected, merged_data$infectiousness_start_infector, units = "hours"))
+merged_data$serial_interval_in_hours3 <-
+	as.numeric(difftime(merged_data$infectiousness_start_infected,
+											merged_data$infectiousness_start_infector,
+											units = "hours"))
 
-serial_interval_in_hours_average3<- mean(merged_data$serial_interval_in_hours3, na.rm = T)
-serial_interval_in_hours_sd3<- sd(merged_data$serial_interval_in_hours3, na.rm = T)
-
-print(serial_interval_in_hours_average3)
+serial_interval_in_hours_average3 <- mean(merged_data$serial_interval_in_hours3, na.rm = T)
 #41.8
-print(serial_interval_in_hours_sd3)
+serial_interval_in_hours_sd3 <- sd(merged_data$serial_interval_in_hours3, na.rm = T)
 #46.5
 ```
 
