@@ -257,7 +257,7 @@ plot3 <- ggplot(epicurve4, aes(x = date)) +
 plot3
 ```
 
-##Natural History Parameters
+# Natural History Parameters
 
 **Merge roster and linelist**
 ```{r}
@@ -277,6 +277,9 @@ Non_Severe <- full_data %>%
 ```{r}
 Severe_cases <- linelist %>% 
 	filter(severe == 1)
+
+Non_Severe_cases <- linelist %>% 
+	filter(severe == 0)
 ```
 
 **Subset to Symptomatic and Asymptomatic**
@@ -385,12 +388,12 @@ linelist <- linelist %>%
 
 #Convert to unambiguous date_time format
 # List of variables to convert
-date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset", "date_time_recovery", "severe_date")
+# date_time_columns <- c("exposure0", "exposure1", "exposure2", "exposure3", "exposure4", "exposure5", "date_time_symptom_onset", "date_time_recovery", "severe_date")
 
-#Loop through the list and convert each column
-for (col_name in date_time_columns) {
-  linelist[[col_name]] <- as.POSIXct(linelist[[col_name]], format = "%Y-%m-%d %H:%M:%S")
-}
+# #Loop through the list and convert each column
+# for (col_name in date_time_columns) {
+#   linelist[[col_name]] <- as.POSIXct(linelist[[col_name]], format = "%Y-%m-%d %H:%M:%S")
+# }
 
 #Calculate start of infectiousness
 linelist <- linelist %>% 
@@ -481,17 +484,20 @@ merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id",
 #Calculate serial interval in days
 merged_data$serial_interval_in_days <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "days"))
 
-serial_interval_in_days_average<- mean(merged_data$serial_interval_in_days, na.rm = T)
+serial_interval_in_days_average <- mean(merged_data$serial_interval_in_days, na.rm = T)
 serial_interval_in_days_sd<- sd(merged_data$serial_interval_in_days, na.rm = T)
 
 #Calculate serial interval in hours
 merged_data$serial_interval_in_hours <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "hours"))
 
-serial_interval_in_hours_average<- mean(merged_data$serial_interval_in_hours, na.rm = T)
-serial_interval_in_hours_sd<- sd(merged_data$serial_interval_in_hours, na.rm = T)
+serial_interval_in_hours_average <- mean(merged_data$serial_interval_in_hours, na.rm = T)
+serial_interval_in_hours_sd <- sd(merged_data$serial_interval_in_hours, na.rm = T)
 
 print(serial_interval_in_hours_average)
+#43.5
 print(serial_interval_in_hours_sd)
+#52.2
+
 #Calculate serial interval in minutes
 merged_data$serial_interval_in_mins <- as.numeric(difftime(merged_data$date_time_symptom_onset_infected, merged_data$date_time_symptom_onset_infector, units = "mins"))
 ```
@@ -504,17 +510,19 @@ merged_data <- merge(linelist, linelist, by.x = "infector_id", by.y = "case_id",
 #Calculate serial interval in days
 merged_data$serial_interval_in_days2 <- as.numeric(difftime(merged_data$infectiousness_end_infected, merged_data$infectiousness_end_infector, units = "days"))
 
-serial_interval_in_days_average2<- mean(merged_data$serial_interval_in_days2, na.rm = T)
-serial_interval_in_days_sd2<- sd(merged_data$serial_interval_in_days2, na.rm = T)
+serial_interval_in_days_average2 <- mean(merged_data$serial_interval_in_days2, na.rm = T)
+serial_interval_in_days_sd2 <- sd(merged_data$serial_interval_in_days2, na.rm = T)
 
 #Calculate serial interval in hours
 merged_data$serial_interval_in_hours2 <- as.numeric(difftime(merged_data$infectiousness_end_infected, merged_data$infectiousness_end_infector, units = "hours"))
 
-serial_interval_in_hours_average2<- mean(merged_data$serial_interval_in_hours2, na.rm = T)
-serial_interval_in_hours_sd2<- sd(merged_data$serial_interval_in_hours2, na.rm = T)
+serial_interval_in_hours_average2 <- mean(merged_data$serial_interval_in_hours2, na.rm = T)
+serial_interval_in_hours_sd2 <- sd(merged_data$serial_interval_in_hours2, na.rm = T)
 
 print(serial_interval_in_hours_average2)
+#28.9
 print(serial_interval_in_hours_sd2)
+#59.7
 ```
 
 **Serial interval (By infectiousness start date)**
@@ -527,7 +535,9 @@ serial_interval_in_hours_average3<- mean(merged_data$serial_interval_in_hours3, 
 serial_interval_in_hours_sd3<- sd(merged_data$serial_interval_in_hours3, na.rm = T)
 
 print(serial_interval_in_hours_average3)
+#41.8
 print(serial_interval_in_hours_sd3)
+#46.5
 ```
 
 ## Generating Plots for Incubation Period
@@ -571,7 +581,7 @@ summary(Infectious_fit_ln_duration)
 denscomp(Infectious_fit_ln_duration, main = "Density Plot of Infectious Period (Lognormal)")
 ```
 
-```{r}
+```{r, eval=FALSE}
 merged_data$serial_interval_in_hours2
 #Filter Infectious periods
 serial_interval_in_hours <- merged_data$serial_interval_in_hours[!(is.na(merged_data$serial_interval_in_hours)) & merged_data$serial_interval_in_hours > 0]
@@ -584,7 +594,7 @@ summary(Serial_interval_fit_ln_duration)
 denscomp(Serial_interval_fit_ln_duration, main = "Density Plot of Serial Interval (Lognormal)")
 ```
 Log Distribution of Natural History Parameters
-```{r}
+```{r, eval=FALSE}
 #Create Graph
 par(mfrow=c(1,4))
 
@@ -633,7 +643,7 @@ abline(v = mean(serial_interval_in_hours), col = "red", lty = 2)
 text(mean(serial_interval_in_hours), 0.01, "Mean", col = "red")
 ```
 Log Distribution of Natural History Parameters (Combined)
-```{r}
+```{r, eval=FALSE}
 #Create Graph
 par(mfrow=c(1,1))
 
@@ -817,6 +827,7 @@ sigma <- serial_interval_in_days_sd #replace with standard deviation of generati
 res <- get_R(i, si_mean = mu, si_sd = sigma)
 R_val <- sample_R(res, 1000)
 r0 <- mean(R_val)
+#2.41 (changes with each run)
 ```
 
 Based on the initial growth rate, the basic reproductive number for RFF, $R_0$, is `r round(r0, 1)`.
@@ -869,7 +880,7 @@ $\frac{dR_s}{dt} = 0.35 \sigma I$
 ```{r}
 mean_duration_severe <- linelist %>%
 	filter(severe == 1) %>%
-	summarize(mean = mean(illness_duration, na.rm = TRUE)) %>% 
+	summarize(mean(illness_duration, na.rm = TRUE)) %>% 
 	as.numeric()
 #24.39286
 
